@@ -1,0 +1,83 @@
+site_name: Canary Decision Room
+site_description: Build intelligent canary delivery on Kubernetes with Java 25, Quarkus, LangChain4j agents, and Argo Rollouts.
+site_url: https://danieloh30.github.io/intelligent-canary-delivery/
+site_author: Daniel Oh
+repo_url: https://github.com/danieloh30/intelligent-canary-delivery
+repo_name: danieloh30/intelligent-canary-delivery
+edit_uri: edit/main/docs/
+strict: true
+exclude_docs: |
+  hooks.py
+
+theme:
+  name: material
+  language: en
+  font: false
+  logo: images/canary-mark.svg
+  favicon: images/canary-mark.svg
+  palette:
+    scheme: default
+    primary: custom
+    accent: custom
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.footer
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+
+nav:
+  - Overview: index.md
+  - Build the demo:
+      - '01 / Run locally': tutorials/01-local.md
+      - '02 / Install on Kubernetes': tutorials/02-cluster.md
+      - '03 / Investigate a release': tutorials/03-investigate.md
+      - '04 / Govern the decision': tutorials/04-govern.md
+  - Understand the platform:
+      - Architecture: architecture.md
+      - Java agents and tools: reference/agents.md
+      - Presenter playbook: demo-design.md
+  - Operate and extend:
+      - API and configuration: reference/api.md
+      - Troubleshooting: reference/troubleshooting.md
+
+plugins:
+  - search
+hooks:
+  - docs/hooks.py
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: workshop-mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+extra_css:
+  - stylesheets/tutorial.css
+extra_javascript:
+  - assets/vendor/mermaid-12.1.0.min.js
+  - javascripts/mermaid-solid-fills.js
+  - javascripts/diagrams.js
+extra:
+  generator: false
+copyright: 'Built by Daniel Oh. Evidence before promotion.'

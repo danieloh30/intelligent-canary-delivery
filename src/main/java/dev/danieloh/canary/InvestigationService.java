@@ -22,7 +22,7 @@ public class InvestigationService {
     @PreDestroy void shutdown(){executor.shutdownNow();}
 
     public synchronized Evaluation start(Evidence evidence, String profile) {
-        if(store.evaluations.values().stream().anyMatch(x->x.status.equals("RUNNING")))throw new jakarta.ws.rs.ClientErrorException("An investigation is already running",409);
+        if(store.hasRunningEvaluation())throw new jakarta.ws.rs.ClientErrorException("An investigation is already running",409);
         if (!Set.of("development","production").contains(profile)) throw new jakarta.ws.rs.BadRequestException("Invalid profile");
         Evaluation e=new Evaluation(evidence,profile,aiMode);
         store.add(e); store.event("orchestrator","Started " + e.id + " using " + aiMode + " agents");

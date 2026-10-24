@@ -9,10 +9,12 @@ import static dev.danieloh.canary.Domain.*;
 
 @ApplicationScoped
 public class DemoStore {
-    public final Map<String, Evaluation> evaluations = new ConcurrentHashMap<>();
+    private final Map<String, Evaluation> evaluations = new ConcurrentHashMap<>();
     private final Deque<Event> events = new ArrayDeque<>();
     private final AtomicLong sequence = new AtomicLong();
-    public volatile String latestId;
+    private volatile String latestId;
+    public Evaluation latest() {String id=latestId;return id==null?null:require(id);}
+    public boolean hasRunningEvaluation() {return evaluations.values().stream().anyMatch(e->e.status.equals("RUNNING"));}
     public synchronized void event(String actor, String message) {
         events.addLast(new Event(sequence.incrementAndGet(), Instant.now(), actor, message));
         while (events.size() > 300) events.removeFirst();
