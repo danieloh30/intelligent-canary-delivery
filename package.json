@@ -1,0 +1,11 @@
+{
+  "name": "intelligent-canary-delivery-ui-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "playwright": "1.64.0"
+  }
+}

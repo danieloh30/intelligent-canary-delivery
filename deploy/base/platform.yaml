@@ -1,0 +1,510 @@
+{
+  "apiVersion": "v1",
+  "kind": "ServiceAccount",
+  "metadata": {
+    "name": "canary-control"
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "ServiceAccount",
+  "metadata": {
+    "name": "canary-workload"
+  },
+  "automountServiceAccountToken": false
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "Role",
+  "metadata": {
+    "name": "canary-observer"
+  },
+  "rules": [
+    {
+      "apiGroups": [
+        ""
+      ],
+      "resources": [
+        "pods",
+        "pods/log",
+        "events"
+      ],
+      "verbs": [
+        "get",
+        "list"
+      ]
+    },
+    {
+      "apiGroups": [
+        "argoproj.io"
+      ],
+      "resources": [
+        "rollouts",
+        "analysisruns"
+      ],
+      "verbs": [
+        "get",
+        "list"
+      ]
+    }
+  ]
+}
+---
+{
+  "apiVersion": "rbac.authorization.k8s.io/v1",
+  "kind": "RoleBinding",
+  "metadata": {
+    "name": "canary-observer"
+  },
+  "subjects": [
+    {
+      "kind": "ServiceAccount",
+      "name": "canary-control"
+    }
+  ],
+  "roleRef": {
+    "apiGroup": "rbac.authorization.k8s.io",
+    "kind": "Role",
+    "name": "canary-observer"
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "canary-control"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "canary-control"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "canary-control"
+        }
+      },
+      "spec": {
+        "serviceAccountName": "canary-control",
+        "automountServiceAccountToken": true,
+        "containers": [
+          {
+            "name": "canary-control",
+            "image": "image-registry.openshift-image-registry.svc:5000/canary-demo/canary-demo:latest",
+            "imagePullPolicy": "Always",
+            "ports": [
+              {
+                "containerPort": 8080,
+                "name": "http"
+              }
+            ],
+            "env": [
+              {
+                "name": "DEMO_ROLE",
+                "value": "control"
+              },
+              {
+                "name": "DEMO_RELEASE",
+                "value": "v1"
+              },
+              {
+                "name": "QUARKUS_APPLICATION_NAME",
+                "value": "canary-control"
+              },
+              {
+                "name": "DEMO_API_TOKEN",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "canary-secrets",
+                    "key": "api-token"
+                  }
+                }
+              },
+              {
+                "name": "DEMO_CLUSTER_ENABLED",
+                "value": "true"
+              },
+              {
+                "name": "DEMO_NAMESPACE",
+                "value": "canary-demo"
+              },
+              {
+                "name": "OPENAI_API_KEY",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "canary-secrets",
+                    "key": "openai-api-key"
+                  }
+                }
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "50m",
+                "memory": "160Mi"
+              },
+              "limits": {
+                "cpu": "1",
+                "memory": "512Mi"
+              }
+            },
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              },
+              "runAsNonRoot": true,
+              "seccompProfile": {
+                "type": "RuntimeDefault"
+              }
+            },
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/q/health/ready",
+                "port": "http"
+              },
+              "initialDelaySeconds": 5
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/q/health/live",
+                "port": "http"
+              },
+              "initialDelaySeconds": 30
+            },
+            "startupProbe": {
+              "httpGet": {
+                "path": "/q/health/started",
+                "port": "http"
+              },
+              "failureThreshold": 40,
+              "periodSeconds": 5
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "canary-control"
+  },
+  "spec": {
+    "selector": {
+      "app": "canary-control"
+    },
+    "ports": [
+      {
+        "name": "http",
+        "port": 8080,
+        "targetPort": 8080
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "inventory"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "inventory"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "inventory"
+        }
+      },
+      "spec": {
+        "serviceAccountName": "canary-workload",
+        "automountServiceAccountToken": false,
+        "containers": [
+          {
+            "name": "inventory",
+            "image": "image-registry.openshift-image-registry.svc:5000/canary-demo/canary-demo:latest",
+            "imagePullPolicy": "Always",
+            "ports": [
+              {
+                "containerPort": 8080,
+                "name": "http"
+              }
+            ],
+            "env": [
+              {
+                "name": "DEMO_ROLE",
+                "value": "inventory"
+              },
+              {
+                "name": "DEMO_RELEASE",
+                "value": "v1"
+              },
+              {
+                "name": "QUARKUS_APPLICATION_NAME",
+                "value": "inventory"
+              },
+              {
+                "name": "DEMO_API_TOKEN",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "canary-secrets",
+                    "key": "api-token"
+                  }
+                }
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "50m",
+                "memory": "160Mi"
+              },
+              "limits": {
+                "cpu": "1",
+                "memory": "512Mi"
+              }
+            },
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              },
+              "runAsNonRoot": true,
+              "seccompProfile": {
+                "type": "RuntimeDefault"
+              }
+            },
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/q/health/ready",
+                "port": "http"
+              },
+              "initialDelaySeconds": 5
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/q/health/live",
+                "port": "http"
+              },
+              "initialDelaySeconds": 30
+            },
+            "startupProbe": {
+              "httpGet": {
+                "path": "/q/health/started",
+                "port": "http"
+              },
+              "failureThreshold": 40,
+              "periodSeconds": 5
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "inventory"
+  },
+  "spec": {
+    "selector": {
+      "app": "inventory"
+    },
+    "ports": [
+      {
+        "name": "http",
+        "port": 8080,
+        "targetPort": 8080
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "traffic-generator"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "traffic-generator"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "traffic-generator"
+        }
+      },
+      "spec": {
+        "serviceAccountName": "canary-workload",
+        "automountServiceAccountToken": false,
+        "containers": [
+          {
+            "name": "traffic-generator",
+            "image": "image-registry.openshift-image-registry.svc:5000/canary-demo/canary-demo:latest",
+            "imagePullPolicy": "Always",
+            "ports": [
+              {
+                "containerPort": 8080,
+                "name": "http"
+              }
+            ],
+            "env": [
+              {
+                "name": "DEMO_ROLE",
+                "value": "traffic"
+              },
+              {
+                "name": "DEMO_RELEASE",
+                "value": "v1"
+              },
+              {
+                "name": "QUARKUS_APPLICATION_NAME",
+                "value": "traffic-generator"
+              },
+              {
+                "name": "DEMO_API_TOKEN",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "canary-secrets",
+                    "key": "api-token"
+                  }
+                }
+              }
+            ],
+            "resources": {
+              "requests": {
+                "cpu": "50m",
+                "memory": "160Mi"
+              },
+              "limits": {
+                "cpu": "1",
+                "memory": "512Mi"
+              }
+            },
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              },
+              "runAsNonRoot": true,
+              "seccompProfile": {
+                "type": "RuntimeDefault"
+              }
+            },
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/q/health/ready",
+                "port": "http"
+              },
+              "initialDelaySeconds": 5
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/q/health/live",
+                "port": "http"
+              },
+              "initialDelaySeconds": 30
+            },
+            "startupProbe": {
+              "httpGet": {
+                "path": "/q/health/started",
+                "port": "http"
+              },
+              "failureThreshold": 40,
+              "periodSeconds": 5
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "checkout"
+  },
+  "spec": {
+    "selector": {
+      "app": "checkout"
+    },
+    "ports": [
+      {
+        "name": "http",
+        "port": 8080,
+        "targetPort": 8080
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "checkout-stable"
+  },
+  "spec": {
+    "selector": {
+      "app": "checkout"
+    },
+    "ports": [
+      {
+        "name": "http",
+        "port": 8080,
+        "targetPort": 8080
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "checkout-canary"
+  },
+  "spec": {
+    "selector": {
+      "app": "checkout"
+    },
+    "ports": [
+      {
+        "name": "http",
+        "port": 8080,
+        "targetPort": 8080
+      }
+    ]
+  }
+}

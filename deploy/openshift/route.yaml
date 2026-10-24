@@ -1,0 +1,20 @@
+{
+  "apiVersion": "route.openshift.io/v1",
+  "kind": "Route",
+  "metadata": {
+    "name": "canary-control"
+  },
+  "spec": {
+    "to": {
+      "kind": "Service",
+      "name": "canary-control"
+    },
+    "port": {
+      "targetPort": "http"
+    },
+    "tls": {
+      "termination": "edge",
+      "insecureEdgeTerminationPolicy": "Redirect"
+    }
+  }
+}

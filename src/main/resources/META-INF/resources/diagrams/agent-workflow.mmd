@@ -1,0 +1,33 @@
+%%{init: {'look':'handDrawn','theme':'base','themeVariables': {'darkMode':false,'background':'#FFFCF5','primaryTextColor':'#1F1F1F','secondaryTextColor':'#1F1F1F','tertiaryTextColor':'#1F1F1F','textColor':'#1F1F1F','lineColor':'#4A4035','edgeLabelBackground':'#FFFCF5','clusterBkg':'#F5F5F0','clusterBorder':'#6B5B45','fontSize':'16px'},'flowchart': {'nodeSpacing':35,'rankSpacing':55,'padding':18}}}%%
+flowchart TD
+    A(["InvestigationWorkflow.investigate()"])
+    M(["MetricsAnalyst.analyze()"])
+    MT["@Tool: compareRevisionMetrics()"]
+    TEAM(["ResearchTeam: @ParallelAgent"])
+    D(["DependencyInvestigator.investigate()"])
+    DT["@Tool: traces and retry logs"]
+    R(["ReleaseAnalyst.review()"])
+    RT["@Tool: release changes and runbook"]
+    C{"CanaryDecisionAgent.decide()"}
+    P{"Java policy accepts evidence?"}
+    YES["Return GO, HOLD, or NO-GO to Argo"]
+    NO["HOLD: incomplete, stale, or unapproved"]
+    A -->|"@SequenceAgent"| M
+    M -->|"@ToolBox"| MT --> TEAM
+    TEAM --> D --> DT --> C
+    TEAM --> R --> RT --> C
+    C --> P
+    P -->|Yes| YES
+    P -->|No| NO
+    style A fill:#D4E6F1,stroke:#2E6B8A,color:#1F1F1F,stroke-width:2px
+    style M fill:#D4E6F1,stroke:#2E6B8A,color:#1F1F1F,stroke-width:2px
+    style MT fill:#FFF8DC,stroke:#C4A000,color:#1F1F1F,stroke-width:2px
+    style TEAM fill:#E8DCC4,stroke:#000000,color:#1F1F1F,stroke-width:2px
+    style D fill:#D4E6F1,stroke:#2E6B8A,color:#1F1F1F,stroke-width:2px
+    style DT fill:#FFF8DC,stroke:#C4A000,color:#1F1F1F,stroke-width:2px
+    style R fill:#D4E6F1,stroke:#2E6B8A,color:#1F1F1F,stroke-width:2px
+    style RT fill:#FFF8DC,stroke:#C4A000,color:#1F1F1F,stroke-width:2px
+    style C fill:#FFE4CC,stroke:#B87333,color:#1F1F1F,stroke-width:2px
+    style P fill:#FFE4CC,stroke:#B87333,color:#1F1F1F,stroke-width:2px
+    style YES fill:#D8F0D8,stroke:#3D7A3D,color:#1F1F1F,stroke-width:2px
+    style NO fill:#E8DCC4,stroke:#000000,color:#1F1F1F,stroke-width:2px

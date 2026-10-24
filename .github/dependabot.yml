@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: daily
+      time: '09:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 10
+    groups:
+      quarkus-platform:
+        patterns: ['io.quarkus*:*', 'io.quarkiverse*:*']
+      java-dependencies:
+        patterns: ['*']
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    groups:
+      browser-tests:
+        patterns: ['*']
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: daily
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily

@@ -1,0 +1,49 @@
+{
+  "apiVersion": "argoproj.io/v1alpha1",
+  "kind": "AnalysisTemplate",
+  "metadata": {
+    "name": "reasoning-gate"
+  },
+  "spec": {
+    "args": [
+      {
+        "name": "release"
+      },
+      {
+        "name": "api-token",
+        "valueFrom": {
+          "secretKeyRef": {
+            "name": "canary-secrets",
+            "key": "api-token"
+          }
+        }
+      }
+    ],
+    "metrics": [
+      {
+        "name": "governed-recommendation",
+        "interval": "5s",
+        "count": 60,
+        "failureLimit": 0,
+        "consecutiveSuccessLimit": 1,
+        "inconclusiveLimit": 60,
+        "consecutiveErrorLimit": 2,
+        "successCondition": "result == \"GO\"",
+        "failureCondition": "result == \"NO_GO\"",
+        "provider": {
+          "web": {
+            "url": "http://canary-control:8080/api/analysis?revision={{args.release}}",
+            "timeoutSeconds": 5,
+            "headers": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{args.api-token}}"
+              }
+            ],
+            "jsonPath": "{$.verdict}"
+          }
+        }
+      }
+    ]
+  }
+}
