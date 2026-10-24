@@ -114,8 +114,8 @@
                 "value": "v1"
               },
               {
-                "name": "QUARKUS_APPLICATION_NAME",
-                "value": "canary-control"
+                "name": "QUARKUS_OTEL_RESOURCE_ATTRIBUTES",
+                "value": "service.name=canary-control"
               },
               {
                 "name": "DEMO_API_TOKEN",
@@ -258,8 +258,8 @@
                 "value": "v1"
               },
               {
-                "name": "QUARKUS_APPLICATION_NAME",
-                "value": "inventory"
+                "name": "QUARKUS_OTEL_RESOURCE_ATTRIBUTES",
+                "value": "service.name=inventory"
               },
               {
                 "name": "DEMO_API_TOKEN",
@@ -385,8 +385,8 @@
                 "value": "v1"
               },
               {
-                "name": "QUARKUS_APPLICATION_NAME",
-                "value": "traffic-generator"
+                "name": "QUARKUS_OTEL_RESOURCE_ATTRIBUTES",
+                "value": "service.name=traffic-generator"
               },
               {
                 "name": "DEMO_API_TOKEN",

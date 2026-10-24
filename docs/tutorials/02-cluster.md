@@ -53,7 +53,7 @@ Argo CD owns release resources:
 
 The cluster build produces an immutable image digest. Platform deployments use that digest, and the Argo CD Application applies the same digest as a Kustomize image override. Changing a release version changes behavior and pod-template identity while keeping the verified application binary fixed.
 
-Secrets pass through private temporary files and Kubernetes Secrets. They do not enter Git or the build context.
+Secrets pass through private temporary files and Kubernetes Secrets. They do not enter Git or the build context. The installer generates a portable GNU-format archive with Python so macOS metadata does not break the OpenShift source extractor.
 
 ## 4. Verify readiness
 

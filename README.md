@@ -75,7 +75,7 @@ Local development:
 Cluster installation:
 
 - A fresh OpenShift 4.22 cluster, logged in with `oc login` using administrator access.
-- `oc`, Python 3, `tar`, Git, and optionally the Argo Rollouts CLI plugin.
+- `oc`, Python 3, Git, and optionally the Argo Rollouts CLI plugin.
 - Cluster image registry enabled, registry storage configured, and outbound access to Maven Central, Docker Hub, Quay, GitHub, and the OpenAI API.
 - Capacity for 10 checkout replicas plus the control service, inventory, traffic generator, Prometheus, Jaeger, and GitOps components. Start with at least **8 GiB free workload memory**; verify actual usage during rehearsal.
 - This repository available to Argo CD. The default URL is `https://github.com/danieloh30/intelligent-canary-delivery.git`. For a private fork, configure Argo CD repository credentials separately.
@@ -117,7 +117,7 @@ The script:
 2. Installs the Red Hat OpenShift GitOps Operator from the catalog's default channel if absent. Set `GITOPS_CHANNEL` to select an approved channel. Existing installations are reused without changing their configuration.
 3. Creates the dedicated `canary-demo` namespace and a cluster-scoped RolloutManager in `openshift-gitops` when none exists. A new operator subscription configures those two namespaces; existing installations retain their configuration and need compatible controller scope.
 4. Stores the model key and a generated presenter token in a namespace Secret, through private temporary files.
-5. Builds the Java application in the cluster using a binary Docker build. Only Dockerfile, pom.xml, and src enter the build context.
+5. Builds the Java application in the cluster using a binary Docker build. Only Dockerfile, pom.xml, and src enter the portable GNU-format build archive. Python creates it without macOS extended-attribute headers.
 6. Pins the cluster build digest, then deploys workloads, the reasoning service, read-only observer RBAC, Prometheus, Jaeger, and an HTTPS Route.
 7. Creates an Argo CD Application owning the checkout Rollout and shared AnalysisTemplate. Platform resources are installer-owned; release resources are Git-owned. The Application applies an immutable image-digest override to the release manifests.
 
