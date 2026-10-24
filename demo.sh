@@ -7,7 +7,7 @@ case ${1:-help} in
   doctor) exec ./scripts/doctor.sh ;;
   dev)
     if [[ -z ${JAVA_HOME:-} && -x /opt/homebrew/opt/openjdk@25/bin/java ]]; then export JAVA_HOME=/opt/homebrew/opt/openjdk@25; export PATH="$JAVA_HOME/bin:$PATH"; fi
-    exec ./mvnw quarkus:dev -Dquarkus.http.port=8095 ;;
+    exec ./mvnw quarkus:dev -Dquarkus.http.port="${DEMO_PORT:-8095}" ;;
   rehearsal) export DEMO_AI_MODE=fixture; exec "$0" dev ;;
   release)
     version=${2:?Usage: ./demo.sh release v1|v2|v3}

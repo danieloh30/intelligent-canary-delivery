@@ -87,7 +87,7 @@ export OPENAI_API_KEY='your-key'  # prefer your shell's secret manager
 ./demo.sh dev
 ```
 
-Open **http://localhost:8095**. The local presenter token is **`demo-local`**. Local mode uses clearly labeled rehearsal evidence with real GPT-4o mini agents. It cannot authorize a cluster rollout.
+Open **http://localhost:8095**. Set `DEMO_PORT` to use another port. The local presenter token is **`demo-local`**. Local mode uses clearly labeled rehearsal evidence with real GPT-4o mini agents. It cannot authorize a cluster rollout.
 
 For deterministic UI rehearsal without API calls:
 

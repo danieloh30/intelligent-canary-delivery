@@ -3,6 +3,7 @@ package dev.danieloh.canary;
 import dev.danieloh.canary.agents.*;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.annotation.PreDestroy;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import java.time.Instant;
 import java.util.*;
@@ -17,6 +18,8 @@ public class InvestigationService {
     @ConfigProperty(name="demo.ai-mode",defaultValue="live") String aiMode;
     @ConfigProperty(name="quarkus.langchain4j.openai.api-key") String apiKey;
     private final ExecutorService executor=Executors.newVirtualThreadPerTaskExecutor();
+
+    @PreDestroy void shutdown(){executor.shutdownNow();}
 
     public synchronized Evaluation start(Evidence evidence, String profile) {
         if(store.evaluations.values().stream().anyMatch(x->x.status.equals("RUNNING")))throw new jakarta.ws.rs.ClientErrorException("An investigation is already running",409);
