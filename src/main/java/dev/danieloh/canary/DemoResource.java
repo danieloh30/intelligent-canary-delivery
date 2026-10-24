@@ -20,8 +20,8 @@ public class DemoResource {
     @GET @Path("/state")
     public Map<String,Object> state() {
         control();
-        return Map.of("mode",mode,"model","gpt-4o-mini","clusterEnabled",cluster.enabled,
-            "latest",store.latestId==null?Map.of():store.require(store.latestId),"events",store.events(),
+        return Map.of("mode",mode,"model","gpt-4o-mini","clusterEnabled",cluster.isEnabled(),
+            "latest",store.latest()==null?Map.of():store.latest(),"events",store.events(),
             "keyConfigured",System.getenv("OPENAI_API_KEY")!=null);
     }
     @GET @Path("/cluster") public Map<String,Object> cluster(){control();return cluster.status();}
@@ -32,9 +32,9 @@ public class DemoResource {
                                @QueryParam("revision") @DefaultValue("v2") String revision) {
         control();
         if(!Set.of("healthy","slowdown","retry","missing").contains(scene)||!Set.of("v1","v2","v3").contains(revision))throw new BadRequestException();
-        if(store.evaluations.values().stream().anyMatch(x->x.status.equals("RUNNING")))throw new ClientErrorException("An investigation is already running",409);
-        Evidence evidence=cluster.enabled?collector.collect(revision):RehearsalEvidence.forScene(scene);
-        if(cluster.enabled && scene.equals("missing")) evidence=new Evidence(evidence.id(),evidence.capturedAt(),evidence.source(),evidence.revision(),evidence.stableRevision(),evidence.rolloutStep(),evidence.stable(),evidence.canary(),List.of(),evidence.logs(),List.of("Presenter-injected trace evidence outage"),evidence.releaseNotes());
+        if(store.hasRunningEvaluation())throw new ClientErrorException("An investigation is already running",409);
+        Evidence evidence=cluster.isEnabled()?collector.collect(revision):RehearsalEvidence.forScene(scene);
+        if(cluster.isEnabled() && scene.equals("missing")) evidence=new Evidence(evidence.id(),evidence.capturedAt(),evidence.source(),evidence.revision(),evidence.stableRevision(),evidence.rolloutStep(),evidence.stable(),evidence.canary(),List.of(),evidence.logs(),List.of("Presenter-injected trace evidence outage"),evidence.releaseNotes());
         return investigations.start(evidence,profile);
     }
     @GET @Path("/evaluations/{id}") public Evaluation evaluation(@PathParam("id") String id){control();return store.require(id);}
@@ -43,9 +43,9 @@ public class DemoResource {
     @GET @Path("/analysis")
     public Map<String,Object> analysis(@QueryParam("revision") String revision) {
         control();
-        if(store.latestId==null)return Map.of("verdict","HOLD","reason","Run an investigation for this release");
-        var e=store.require(store.latestId);
-        if(!cluster.enabled || !e.mode.equals("live") || !e.evidence.source().equals("LIVE_KUBERNETES_REQUESTS"))
+        var e=store.latest();
+        if(e==null)return Map.of("verdict","HOLD","reason","Run an investigation for this release");
+        if(!cluster.isEnabled() || !e.mode.equals("live") || !e.evidence.source().equals("LIVE_KUBERNETES_REQUESTS"))
             return Map.of("verdict","HOLD","reason","Offline evidence cannot control a rollout");
         if(e.decision==null||revision==null||!revision.equals(e.evidence.revision())||Instant.now().isAfter(e.decision.expiresAt()))
             return Map.of("verdict","HOLD","reason","Decision pending, stale, or belongs to another release");
