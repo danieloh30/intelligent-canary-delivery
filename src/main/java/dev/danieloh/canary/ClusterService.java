@@ -17,10 +17,11 @@ public class ClusterService {
     @Inject KubernetesClient kube;
     @Inject ObjectMapper json;
     @ConfigProperty(name="demo.namespace",defaultValue="canary-demo") String namespace;
-    @ConfigProperty(name="demo.cluster-enabled",defaultValue="false") boolean enabled;
+    @ConfigProperty(name="demo.cluster-enabled",defaultValue="false") private boolean enabled;
     @ConfigProperty(name="demo.api-token",defaultValue="") String token;
     @ConfigProperty(name="demo.gitops-namespace",defaultValue="openshift-gitops") String gitopsNamespace;
     private final HttpClient http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
+    public boolean isEnabled(){return enabled;}
     public static ResourceDefinitionContext context(String plural,String kind) {
         return new ResourceDefinitionContext.Builder().withGroup("argoproj.io").withVersion("v1alpha1")
             .withPlural(plural).withKind(kind).withNamespaced(true).build();
