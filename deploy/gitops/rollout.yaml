@@ -16,6 +16,9 @@
       "metadata": {
         "labels": {
           "app": "checkout"
+        },
+        "annotations": {
+          "demo.canary/released-at": "2026-10-24T20:33:03.731729+00:00"
         }
       },
       "spec": {
@@ -39,11 +42,11 @@
               },
               {
                 "name": "DEMO_RELEASE",
-                "value": "v1"
+                "value": "v2"
               },
               {
-                "name": "QUARKUS_APPLICATION_NAME",
-                "value": "checkout"
+                "name": "QUARKUS_OTEL_RESOURCE_ATTRIBUTES",
+                "value": "service.name=checkout"
               },
               {
                 "name": "DEMO_API_TOKEN",
@@ -128,7 +131,7 @@
               "args": [
                 {
                   "name": "release",
-                  "value": "v1"
+                  "value": "v2"
                 }
               ]
             }
@@ -151,7 +154,7 @@
               "args": [
                 {
                   "name": "release",
-                  "value": "v1"
+                  "value": "v2"
                 }
               ]
             }
