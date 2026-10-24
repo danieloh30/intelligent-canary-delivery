@@ -20,6 +20,8 @@ class AgentWorkflowTest {
         for(int i=0;i<400 && e.status.equals("RUNNING");i++)Thread.sleep(50);
         assertEquals("COMPLETE",e.status);
         assertEquals(3,e.findings.size(),"Specialists must all return findings");
+        assertTrue(e.findings.get("dependency").summary().startsWith("Dependency"),"Dependency role must use its own prompt and finding");
+        assertTrue(e.findings.get("release").summary().startsWith("Release"),"Release role must use its own prompt and finding");
         assertTrue(e.toolReads.containsAll(Set.of("metrics-tool","trace-tool","log-tool","release-tool","runbook-tool")));
         assertEquals(Domain.Verdict.NO_GO,e.decision.effective());
         assertTrue(MockOpenAi.requests.get()>=7,"Real model protocol must run, including tool result turns");

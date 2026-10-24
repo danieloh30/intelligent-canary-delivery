@@ -16,4 +16,5 @@ metric=analysis['spec']['metrics'][0]
 assert metric['successCondition']=='result == "GO"'
 assert metric['failureCondition']=='result == "NO_GO"'
 assert metric['consecutiveSuccessLimit']==1
+assert metric['provider']['web']['url'].startswith('http://canary-control.canary-demo.svc.cluster.local:8080/')
 print('Manifest structural checks passed (live API validation still required).')

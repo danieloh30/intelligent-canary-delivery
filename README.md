@@ -159,7 +159,7 @@ Without a traffic-management provider, Argo Rollouts uses replica proportions to
 - Start all infrastructure before the talk. Do not build images or install operators on stage.
 - Each stage needs a fresh investigation. A GO decision cannot authorize the next rollout step.
 - Model work has an 85-second orchestration deadline and a 12-tool investigation budget. Model calls have bounded timeouts. Failure or timeout produces HOLD.
-- Argo polls the decision endpoint every 5 seconds for up to 5 minutes. Pending decisions remain inconclusive. A completed inconclusive AnalysisRun does not automatically restart: use `./demo.sh retry-analysis` after addressing the cause, or release a fresh candidate.
+- Argo polls the decision endpoint every 5 seconds for up to 15 minutes. Pending decisions remain inconclusive. A completed inconclusive AnalysisRun does not automatically restart: use `./demo.sh retry-analysis` after addressing the cause, or release a fresh candidate.
 - Scenarios can start independently. Use `./demo.sh release v1` to restore the intended baseline, clear the inventory fault, and verify Healthy before the next rehearsal. Release v1 may still require investigation if it updates an existing rollout.
 - If time is short, start at Hidden retries and show the pre-rehearsed healthy baseline. Skip optional inspection rather than bypassing gates.
 - If live infrastructure or the model is unavailable, open the separately labeled local rehearsal. Never present fixture output as live AI or live Kubernetes evidence.
@@ -245,3 +245,9 @@ All Mermaid charts follow the [agentic Java workshop reference](https://danieloh
 - [Argo Rollouts web analysis](https://argoproj.github.io/argo-rollouts/analysis/web/)
 - [Argo Rollouts analysis lifecycle](https://argoproj.github.io/argo-rollouts/features/analysis/)
 - [Red Hat OpenShift GitOps Argo Rollouts](https://docs.redhat.com/en/documentation/red_hat_openshift_gitops/1.21/html/argo_rollouts/index)
+
+Live-cluster details: the AnalysisTemplate uses the reasoning service’s full namespace-qualified DNS name because the Rollouts controller runs in `openshift-gitops`. Tool responses carry the investigation ID separately from trace IDs, and observations label their stable/canary cohort. Specialist prompts explicitly require their own tool reads; the policy holds any result with missing tool reads or unresolved evidence limitations.
+
+The web analysis can wait up to 15 minutes on HOLD. If it has already finished inconclusively, `./demo.sh retry-analysis` commits a fresh identity for the current release through GitOps, creating a new analysis instead of skipping the gate.
+
+OpenShift Topology uses `app.openshift.io/runtime: quarkus` on the Java workloads. Prometheus and Jaeger also set `app.openshift.io/custom-icon` to their official CNCF logo URLs because they are not built-in runtime icons. These are workload metadata labels/annotations and do not change service selectors.

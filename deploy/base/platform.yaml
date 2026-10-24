@@ -75,7 +75,10 @@
   "apiVersion": "apps/v1",
   "kind": "Deployment",
   "metadata": {
-    "name": "canary-control"
+    "name": "canary-control",
+    "labels": {
+      "app.openshift.io/runtime": "quarkus"
+    }
   },
   "spec": {
     "replicas": 1,
@@ -219,7 +222,10 @@
   "apiVersion": "apps/v1",
   "kind": "Deployment",
   "metadata": {
-    "name": "inventory"
+    "name": "inventory",
+    "labels": {
+      "app.openshift.io/runtime": "quarkus"
+    }
   },
   "spec": {
     "replicas": 1,
@@ -346,7 +352,10 @@
   "apiVersion": "apps/v1",
   "kind": "Deployment",
   "metadata": {
-    "name": "traffic-generator"
+    "name": "traffic-generator",
+    "labels": {
+      "app.openshift.io/runtime": "quarkus"
+    }
   },
   "spec": {
     "replicas": 1,

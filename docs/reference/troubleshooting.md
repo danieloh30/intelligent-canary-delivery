@@ -93,3 +93,11 @@ mkdocs build --strict
 ```
 
 Do not switch to a default Mermaid theme to work around a loading problem; all diagrams share the selected workshop style.
+
+## AnalysisRun cannot resolve the reasoning service
+
+The Rollouts controller runs in `openshift-gitops`, while the service runs in `canary-demo`. Use `http://canary-control.canary-demo.svc.cluster.local:8080` in the AnalysisTemplate. After correcting a failed template, re-enter the release through GitOps with `./demo.sh retry-analysis`; an already failed AnalysisRun is immutable history.
+
+## Healthy telemetry still produces HOLD
+
+Inspect the decision reason, specialist limitations, and evidence references. The platform requires all five tool reads and the current investigation UUID in each finding. Request trace IDs are separate identifiers and cannot authorize promotion. A concrete model or evidence validation failure remains HOLD; collect another window and investigate again. After clearing a slowdown, allow the full 60-second observation window to drain before expecting recovered p95 latency.

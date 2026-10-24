@@ -8,11 +8,13 @@ import java.util.*;
 public class DependencyTools {
     @Inject ToolAccess access;
     @Tool("Read sampled checkout request observations carrying real OpenTelemetry trace IDs; full spans are in Jaeger")
-    public List<Map<String,Object>> findDependencyTraces(String evaluation_id) {
-        return access.read(evaluation_id,"trace-tool").evidence.traces();
+    public Map<String,Object> findDependencyTraces(String evaluation_id) {
+        var evidence=access.read(evaluation_id,"trace-tool").evidence;
+        return Map.of("evidenceId",evidence.id(),"canaryRevision",evidence.revision(),"observations",evidence.traces());
     }
     @Tool("Read bounded checkout retry log records correlated by trace ID in the same observation window")
-    public List<String> findRetryLogs(String evaluation_id) {
-        return access.read(evaluation_id,"log-tool").evidence.logs();
+    public Map<String,Object> findRetryLogs(String evaluation_id) {
+        var evidence=access.read(evaluation_id,"log-tool").evidence;
+        return Map.of("evidenceId",evidence.id(),"canaryRevision",evidence.revision(),"logs",evidence.logs());
     }
 }

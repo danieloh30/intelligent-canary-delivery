@@ -37,7 +37,7 @@ public class MockOpenAi implements QuarkusTestResourceLifecycleManager {
                     } else if(decision) {
                         message.put("content",json.writeValueAsString(Map.of("verdict","NO_GO","summary","Canary-only dependency retry amplification","evidenceIds",List.of(id),"limitations",List.of())));
                     } else {
-                        message.put("content",json.writeValueAsString(Map.of("summary","Evidence supports canary-specific retry amplification","evidenceIds",List.of(id),"limitations",List.of())));
+                        message.put("content",json.writeValueAsString(Map.of("summary",input.toString().contains("Act as Dependency Investigator")?"Dependency evidence supports canary-specific retries":input.toString().contains("Act as Release Analyst")?"Release runbook confirms retry budget regression":"Metrics evidence shows HTTP success","evidenceIds",List.of(id),"limitations",List.of())));
                     }
                     byte[] body=json.writeValueAsBytes(Map.of("id","chatcmpl-stub","object","chat.completion","created",1,"model","gpt-4o-mini","choices",List.of(Map.of("index",0,"message",message,"finish_reason",finish)),"usage",Map.of("prompt_tokens",10,"completion_tokens",10,"total_tokens",20)));
                     exchange.getResponseHeaders().add("Content-Type","application/json");exchange.sendResponseHeaders(200,body.length);exchange.getResponseBody().write(body);

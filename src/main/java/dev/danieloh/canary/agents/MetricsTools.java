@@ -11,6 +11,6 @@ public class MetricsTools {
     public Map<String,Object> compareRevisionMetrics(String evaluation_id) {
         var e = access.read(evaluation_id, "metrics-tool").evidence;
         return Map.of("evidenceId", e.id(), "source", e.source(), "capturedAt", e.capturedAt().toString(),
-                "stable", e.stable(), "canary", e.canary(), "missing", e.missing());
+                "stable", e.stable(), "canary", e.canary(), "canaryRevision", e.revision(), "missing", e.missing());
     }
 }

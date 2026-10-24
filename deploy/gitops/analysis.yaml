@@ -23,16 +23,16 @@
       {
         "name": "governed-recommendation",
         "interval": "5s",
-        "count": 60,
+        "count": 180,
         "failureLimit": 0,
         "consecutiveSuccessLimit": 1,
-        "inconclusiveLimit": 60,
+        "inconclusiveLimit": 180,
         "consecutiveErrorLimit": 2,
         "successCondition": "result == \"GO\"",
         "failureCondition": "result == \"NO_GO\"",
         "provider": {
           "web": {
-            "url": "http://canary-control:8080/api/analysis?revision={{args.release}}",
+            "url": "http://canary-control.canary-demo.svc.cluster.local:8080/api/analysis?revision={{args.release}}",
             "timeoutSeconds": 5,
             "headers": [
               {

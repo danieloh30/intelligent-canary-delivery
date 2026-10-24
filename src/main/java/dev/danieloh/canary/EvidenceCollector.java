@@ -27,7 +27,10 @@ public class EvidenceCollector {
                 try {
                     var data=cluster.mapper().readValue(cluster.request("http://"+pod.getStatus().getPodIP()+":8080/internal/observations","GET"),
                         new com.fasterxml.jackson.core.type.TypeReference<List<Map<String,Object>>>(){});
-                    for(var item:data)item.put("podHash",hash);
+                    for(var item:data) {
+                        item.put("podHash",hash);
+                        item.put("cohort",stableHash.equals(hash)?"stable":"canary");
+                    }
                     if(stableHash.equals(hash))stable.addAll(data);else canary.addAll(data);
                 }catch(Exception ex){missing.add("Pod evidence unavailable: "+pod.getMetadata().getName());}
             }
@@ -44,7 +47,11 @@ public class EvidenceCollector {
         String id=UUID.randomUUID().toString();
         return new Evidence(id,Instant.now(),"LIVE_KUBERNETES_REQUESTS",expectedRevision,stableHash,stepIndex,
             summarize(stable),summarize(canary),sampled,logs,missing,
-            expectedRevision.equals("v3")?"v3: inventory retry budget increased to eight attempts":"v2: checkout response optimization");
+            switch(expectedRevision) {
+                case "v1" -> "v1: baseline checkout with one inventory attempt";
+                case "v3" -> "v3: inventory retry budget increased to eight attempts";
+                default -> "v2: checkout response optimization";
+            });
     }
     public static Signal summarize(List<Map<String,Object>> observations) {
         if(observations.isEmpty())return new Signal(0,0,0,0);

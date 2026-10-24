@@ -32,9 +32,10 @@ PY
     git push origin HEAD:main
     echo 'Argo CD will reconcile the release. Wait for canary traffic, then run an investigation in the dashboard.' ;;
   retry-analysis)
-    # Argo does not automatically resume a completed inconclusive AnalysisRun.
-    command -v kubectl-argo-rollouts >/dev/null || { echo 'Install the Argo Rollouts kubectl plugin first.' >&2; exit 1; }
-    kubectl-argo-rollouts -n "$NS" retry rollout checkout ;;
+    # A completed inconclusive analysis must not be bypassed with promote.
+    # Re-enter the current release through GitOps with a fresh template identity.
+    version=$(python3 -c 'import json; d=json.load(open("deploy/gitops/rollout.yaml")); print(next(e["value"] for e in d["spec"]["template"]["spec"]["containers"][0]["env"] if e["name"]=="DEMO_RELEASE"))')
+    exec "$0" release "$version" ;;
   status) oc -n "$NS" get rollout,analysisrun,pods ;;
   logs) oc -n "$NS" logs -l "app=${2:-canary-control}" --tail=80 --follow ;;
   *) echo 'Usage: ./demo.sh install|doctor|dev|rehearsal|release v1|v2|v3|retry-analysis|status|logs [app]' ;;

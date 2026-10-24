@@ -43,7 +43,7 @@ The shared AnalysisTemplate polls the authenticated decision endpoint every five
 - `NO_GO` satisfies the failure condition.
 - `HOLD` satisfies neither and remains inconclusive while the measurement budget lasts.
 
-The analysis waits up to five minutes. A completed inconclusive run does not automatically restart. Fix the cause, then retry the analysis or release a fresh candidate:
+The analysis waits up to 15 minutes. A completed inconclusive run does not automatically restart. Fix the cause, then re-enter the same release through GitOps with a fresh pod-template identity or release a new candidate:
 
 ```bash
 ./demo.sh retry-analysis
