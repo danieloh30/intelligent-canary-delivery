@@ -17,5 +17,7 @@ class DemoResourceTest {
         String id=given().header("Authorization","Bearer test-token").post("/api/evaluate?scene=retry&revision=v3").then().statusCode(200).extract().path("id");
         String result="";for(int i=0;i<100;i++){result=given().header("Authorization","Bearer test-token").get("/api/evaluations/"+id).then().statusCode(200).extract().path("decision.effective");if(result!=null)break;Thread.sleep(20);}
         assertEquals("NO_GO",result);
+        given().header("Authorization","Bearer test-token").get("/api/state").then().statusCode(200)
+            .body("latest.id",is(id)).body("latest.decision.effective",is("NO_GO"));
     }
 }

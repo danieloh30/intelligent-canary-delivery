@@ -54,3 +54,6 @@ secrets/
 
 __pycache__/
 *.pyc
+
+site/
+.docs-venv/
