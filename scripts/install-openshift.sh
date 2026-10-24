@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 NS=${DEMO_NAMESPACE:-canary-demo}
 REPO_URL=${REPO_URL:-https://github.com/danieloh30/intelligent-canary-delivery.git}
 GITOPS_NS=${GITOPS_NAMESPACE:-openshift-gitops}
-for tool in oc python3 tar; do command -v "$tool" >/dev/null || { echo "Missing $tool" >&2; exit 1; }; done
+for tool in oc python3; do command -v "$tool" >/dev/null || { echo "Missing $tool" >&2; exit 1; }; done
 [[ "$NS" == canary-demo && "$GITOPS_NS" == openshift-gitops ]] || { echo 'This installer currently supports the dedicated canary-demo namespace and default openshift-gitops instance.' >&2; exit 1; }
 : "${OPENAI_API_KEY:?Export OPENAI_API_KEY before installation}"
 oc whoami >/dev/null
@@ -93,7 +93,7 @@ oc -n "$NS" create secret generic canary-secrets --from-file="$work/openai-api-k
 if ! oc -n "$NS" get buildconfig canary-demo >/dev/null 2>&1; then
   oc -n "$NS" new-build --name=canary-demo --binary --strategy=docker
 fi
-tar -czf "$work/source.tar.gz" Dockerfile pom.xml src
+python3 scripts/package-source.py "$work/source.tar.gz"
 oc -n "$NS" start-build canary-demo --from-archive="$work/source.tar.gz" --follow --wait
 digest=$(oc -n "$NS" get imagestreamtag canary-demo:latest -o jsonpath='{.image.metadata.name}')
 [[ "$digest" == sha256:* ]] || { echo 'Build did not produce an immutable image digest.' >&2; exit 1; }

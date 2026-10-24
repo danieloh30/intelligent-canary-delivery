@@ -23,7 +23,20 @@ updates:
     directory: /
     schedule:
       interval: daily
+    # Java 25 is the demonstrated toolchain; Java-major migrations require a deliberate review.
+    ignore:
+      - dependency-name: maven
+        versions: ['3.9-eclipse-temurin-26']
+      - dependency-name: eclipse-temurin
+        versions: ['26-jre']
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: daily
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: daily
+    groups:
+      documentation:
+        patterns: ['*']
