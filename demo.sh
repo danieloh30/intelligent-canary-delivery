@@ -5,6 +5,7 @@ NS=${DEMO_NAMESPACE:-canary-demo}
 case ${1:-help} in
   install) exec ./scripts/install-openshift.sh ;;
   doctor) exec ./scripts/doctor.sh ;;
+  open|argo|present) exec python3 scripts/open-demo.py "$@" ;;
   dev)
     if [[ -z ${JAVA_HOME:-} && -x /opt/homebrew/opt/openjdk@25/bin/java ]]; then export JAVA_HOME=/opt/homebrew/opt/openjdk@25; export PATH="$JAVA_HOME/bin:$PATH"; fi
     exec ./mvnw quarkus:dev -Dquarkus.http.port="${DEMO_PORT:-8095}" ;;
@@ -38,5 +39,5 @@ PY
     exec "$0" release "$version" ;;
   status) oc -n "$NS" get rollout,analysisrun,pods ;;
   logs) oc -n "$NS" logs -l "app=${2:-canary-control}" --tail=80 --follow ;;
-  *) echo 'Usage: ./demo.sh install|doctor|dev|rehearsal|release v1|v2|v3|retry-analysis|status|logs [app]' ;;
+  *) echo 'Usage: ./demo.sh install|doctor|open [--local]|argo|present|dev|rehearsal|release v1|v2|v3|retry-analysis|status|logs [app]' ;;
 esac

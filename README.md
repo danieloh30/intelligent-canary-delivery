@@ -255,3 +255,16 @@ OpenShift Topology uses `app.openshift.io/runtime: quarkus` on the Java workload
 Live integration rehearsal completed on OpenShift 4.22.18 with Java 25 and GPT-4o mini: shared slowdown HOLD; recovered health GO; production approval HOLD → GO; missing trace evidence HOLD; and v3 retry amplification NO-GO with a failed AnalysisRun and actual rollout abort. The v3 check observed zero HTTP errors, approximately 10 ms p95 latency, and five dependency attempts per checkout. Real-browser validation covered the cluster dashboard, controller logs, and both paper-style diagrams. LLM output is validated, not predetermined; invalid references or unresolved limitations remain HOLD and require investigation.
 
 Argo CD UI access is configured separately from Kubernetes RBAC. Installation grants the current human OpenShift user read access to the demo application through `canary-demo-viewers`; set `DEMO_PRESENTER_USER` when installing for a different person. For an existing installation run `bash scripts/configure-argocd-access.sh <openshift-username>`, then sign out of Argo CD and log back in via OpenShift to refresh group claims.
+
+### Open presenter tabs without copying tokens
+
+```bash
+./demo.sh open --local   # local app; uses DEMO_PORT (8095 by default)
+./demo.sh open           # OpenShift dashboard with the Secret credential
+./demo.sh argo           # Argo CD; normal OpenShift SSO
+./demo.sh present        # dashboard + Argo CD, ready for the live demo
+```
+
+Localhost automatically tries the development token `demo-local`. For a custom local `DEMO_API_TOKEN`, use the local launcher. On OpenShift, the launcher reads the route and `canary-secrets` using your existing `oc` login; it does not change API authorization. It passes access through a URL fragment, which is not sent to the server, and the SPA immediately removes it from the address bar and stores it only in that tab’s session storage. The token is not printed or written to disk. Treat the handoff as a credential: do not copy/share the launch URL or record the browser during launch. The manual dialog remains available for direct route visits or expired access. Argo CD uses its separate SSO session.
+
+The core flow now explicitly visits Argo CD at baseline (Git revision and resource tree), recovered GO (Successful AnalysisRun and promotion), and NO-GO (Failed AnalysisRun, aborted Rollout, stable ReplicaSet). Prepare both tabs before starting the 10/15-minute timer.

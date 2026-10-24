@@ -168,4 +168,5 @@ oc -n "$NS" rollout status deployment/prometheus --timeout=300s
 echo "Dashboard: https://$(oc -n "$NS" get route canary-control -o jsonpath='{.spec.host}')"
 echo 'Get the presenter token locally: oc -n canary-demo get secret canary-secrets -o jsonpath="{.data.api-token}" | base64 --decode'
 echo 'Verify Argo sync and traffic before rehearsal: ./demo.sh doctor'
+echo 'Open the authenticated dashboard and Argo CD tabs: ./demo.sh present'
 echo 'Operator and OpenShift 4.22 compatibility still requires a real-cluster rehearsal.'

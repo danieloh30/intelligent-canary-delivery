@@ -35,6 +35,8 @@ Wait until the **10% analysis step** is running and both revisions have at least
 !!! note "Traffic proportions are approximate"
     The demo uses replica proportions without a traffic-management provider. Ten replicas make 10% and 50% easy to explain, but the request share is not guaranteed to equal the replica share. The traffic generator closes each connection so new canary pods can receive requests.
 
+Before injecting faults, run `./demo.sh argo`, log in via OpenShift, and open **canary-checkout**. Point out its Git revision and resource tree, including the Rollout and AnalysisTemplate. Keep this tab open.
+
 ## 3. Inject the shared slowdown
 
 In the UI:
@@ -47,7 +49,7 @@ Both revisions should show increased inventory latency. The basic static check f
 
 The appropriate initial result is **HOLD**. A known dependency cause does not make ongoing customer degradation safe.
 
-Clear the fault, let affected observations drain from the **60-second window**, and investigate again. A healthy, sufficiently sampled observation can produce GO. Repeat the evaluation when the rollout reaches its 50% analysis stage; a decision cannot authorize a different stage.
+Clear the fault, let affected observations drain from the **60-second window**, and investigate again. A healthy, sufficiently sampled observation can produce GO. In the Argo CD tab, show the Successful AnalysisRun and progression to the next stage. Repeat the evaluation when the rollout reaches its 50% analysis stage; a decision cannot authorize a different stage.
 
 ## 4. Release the retry regression
 
@@ -68,7 +70,7 @@ The expected evidence pattern is:
 
 The specialists retrieve metrics, request observations, retry records, release metadata, and operational guidance. The decision agent should recommend **NO-GO** for the canary-specific regression. Inspect the actual evidence and response rather than assuming the model will always produce the desired answer.
 
-Argo Rollouts should abort the candidate. Confirm the controller outcome and stable recovery in the UI and live logs.
+Argo Rollouts should abort the candidate. Switch to Argo CD and open the Failed AnalysisRun. Show the aborted/degraded Rollout and the stable ReplicaSet retaining service. Confirm the same outcome in the SPA and live logs. Explain that Argo CD can remain Synced while Rollout health is Degraded: Git reconciliation and release health are different signals.
 
 ## 5. Explain the evidence
 

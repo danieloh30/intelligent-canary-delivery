@@ -2,7 +2,11 @@ const $=s=>document.querySelector(s);
 const names={metrics:'Metrics Analyst',dependency:'Dependency Investigator',release:'Release Analyst',decision:'Canary Decision Agent'};
 const stories={healthy:['What does a healthy release look like?','Establish the stable baseline before introducing a controlled fault.'],slowdown:['Is the release responsible for this slowdown?','Compare stable and canary. A shared dependency problem calls for context, recovery, and a fresh observation window.'],retry:['Can successful requests still hurt the system?','Follow the extra inventory calls. The canary may look healthy while consuming more dependency capacity.'],missing:['When should the platform refuse to decide?','Missing evidence is uncertainty. The policy gate withholds permission to promote.']};
 let scene='healthy',state={},tab='overview',busy=false,paused=false,lastCluster=0,elapsed=0,ticking=false;
-let token=sessionStorage.getItem('canary-token')||'';
+function consumeAccess(){const handoff=new URLSearchParams(location.hash.slice(1));if(!handoff.has('access'))return '';const value=handoff.get('access');handoff.delete('access');history.replaceState(null,'',location.pathname+location.search+(handoff.size?'#'+handoff.toString():''));return value||'';}
+const access=consumeAccess();
+const localHost=['localhost','127.0.0.1','[::1]'].includes(location.hostname);
+let token=access||sessionStorage.getItem('canary-token')||(localHost?'demo-local':'');
+if(token)sessionStorage.setItem('canary-token',token);
 function text(el,value){el.textContent=value;}
 function notice(message){$('#notice').hidden=!message;text($('#notice'),message||'');}
 async function api(path,method='GET'){
@@ -63,4 +67,5 @@ $('#download').addEventListener('click',()=>{if(!state.latest?.id){notice('Run a
 $('#pause-logs').addEventListener('click',()=>{paused=!paused;text($('#pause-logs'),paused?'Resume updates':'Pause updates');});
 async function logs(){if(tab!=='logs'||paused||!token)return;const source=$('#log-source').value;if(source==='agents'){render();return;}try{text($('#console'),(await api('/logs/'+source)).join('\n'));}catch(e){notice(e.message);}}
 $('#log-source').addEventListener('change',logs);
+window.addEventListener('hashchange',()=>{const value=consumeAccess();if(!value)return;token=value;sessionStorage.setItem('canary-token',token);if($('#access-dialog').open)$('#access-dialog').close();poll();});
 agentCards();poll();if(!token)$('#access-dialog').showModal();setInterval(poll,2000);setInterval(logs,4000);
