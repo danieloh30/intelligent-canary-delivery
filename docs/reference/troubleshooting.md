@@ -101,3 +101,15 @@ The Rollouts controller runs in `openshift-gitops`, while the service runs in `c
 ## Healthy telemetry still produces HOLD
 
 Inspect the decision reason, specialist limitations, and evidence references. The platform requires all five tool reads and the current investigation UUID in each finding. Request trace IDs are separate identifiers and cannot authorize promotion. A concrete model or evidence validation failure remains HOLD; collect another window and investigate again. After clearing a slowdown, allow the full 60-second observation window to drain before expecting recovered p95 latency.
+
+## Argo CD shows no applications after OpenShift login
+
+First check `oc -n openshift-gitops get applications`: an existing `canary-checkout` can be healthy even when your UI list is empty. Argo CD has its own RBAC; Kubernetes cluster-admin access does not automatically grant Argo CD UI access. The installer adds the current human OpenShift user (or `DEMO_PRESENTER_USER`) to `canary-demo-viewers` and grants that group read access to `default/canary-checkout` and its logs. It preserves existing Argo policies and does not grant sync or deployment writes.
+
+For an existing installation, run this as a cluster administrator, replacing `admin` with the OpenShift username used to log into Argo CD:
+
+```bash
+bash scripts/configure-argocd-access.sh admin
+```
+
+Then **sign out of Argo CD and log in via OpenShift again**. Refreshing the browser alone retains old group claims. In Argo CD User Info, verify that your SSO groups include `canary-demo-viewers`. If installing through a service account, set `DEMO_PRESENTER_USER` to the intended human username first.

@@ -75,6 +75,7 @@ for ((i=0;i<60;i++)); do
   sleep 5
 done
 oc -n "$GITOPS_NS" rollout status deployment/openshift-gitops-server --timeout=600s
+bash scripts/configure-argocd-access.sh
 # Secrets pass through private temporary files, never command arguments or Git.
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT

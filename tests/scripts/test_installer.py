@@ -19,6 +19,13 @@ elif args[:3]==['get','rolloutmanagers.argoproj.io','-A']:
  elif os.environ.get('OC_TEST_EXISTING')=='namespace':print('rolloutmanager/unrelated')
 elif 'can-i' in args:print('yes')
 elif '--show-server' in args:print('https://cluster.example.test:6443')
+elif args==['whoami']:print('presenter')
+elif 'get' in args and 'argocd' in args:
+ print(json.dumps({'spec':{'rbac':{'policy':'g, existing-admins, role:admin\n','scopes':'[groups]'}}}))
+elif 'get' in args and 'group' in args:sys.exit(1)
+elif 'patch' in args and 'argocd' in args:
+ patch=next(x.split('=',1)[1] for x in args if x.startswith('--patch-file='))
+ (root/'argocd-patch').write_text(Path(patch).read_text())
 elif 'clusterversion' in args:print('4.22.0')
 elif 'create' in args and 'namespace' in args:print('apiVersion: v1\nkind: Namespace\nmetadata:\n  name: canary-demo')
 elif 'apply' in args:
@@ -55,6 +62,12 @@ class InstallerTest(unittest.TestCase):
         combined=result.stdout+result.stderr+(root/'calls').read_text()
         self.assertNotIn('installer-test-secret',combined)
         self.assertNotIn('presenter-test-secret',combined)
+        import json
+        policy=json.loads((root/'argocd-patch').read_text())['spec']['rbac']['policy']
+        self.assertIn('g, existing-admins, role:admin',policy)
+        self.assertIn('applications, get, default/canary-checkout, allow',policy)
+        self.assertNotIn('applications, *,',policy)
+        self.assertIn('canary-demo-viewers',combined)
     def test_incompatible_existing_namespace_controller_stops_install(self):
         root,result=self.run_installer('namespace')
         self.assertNotEqual(0,result.returncode)
