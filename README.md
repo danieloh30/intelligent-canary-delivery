@@ -66,7 +66,7 @@ The release tool reads the small allowlisted v1/v2/v3 release catalog. The runbo
 
 Local development:
 
-- JDK **21+**, Git, and an internet connection for Maven dependencies.
+- JDK **25**, Git, and an internet connection for Maven dependencies.
 - `OPENAI_API_KEY` for real model calls. No key is needed for explicit offline rehearsal.
 - Node.js **22+** only for browser tests. The SPA has no runtime npm dependencies.
 
