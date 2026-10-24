@@ -2,6 +2,8 @@
 
 **From Static Rules to Reasoning Platforms: Scaling Intelligent Canary Delivery in 2026**
 
+**[Read the step-by-step tutorial](https://danieloh30.github.io/intelligent-canary-delivery/)**
+
 A Kubernetes tech demo with four Java agents built using Quarkus and LangChain4j `@Agent`, a presenter SPA, and governed Argo Rollouts analysis. Run a complete story in **10 minutes**, or inspect investigation tools and governance in **15 minutes**.
 
 The cluster installation targets a fresh **OpenShift 4.22** cluster. The application architecture uses Kubernetes APIs; OpenShift supplies operator lifecycle, image builds, an internal registry, and the external Route. The installer must be rehearsed on a real cluster before presenting; local tests do not establish operator compatibility.
@@ -203,6 +205,22 @@ Dependabot checks Maven (including the Quarkus platform and LangChain4j BOM), np
 Run `./scripts/publish-github.sh` with GitHub CLI authenticated as `danieloh30` to create the public repository, push main, enable auto-merge, and require the `verify` CI check with an up-to-date branch. **Branch protection is required for gated auto-merge.** If account permissions or repository settings reject protection, resolve that before enabling the auto-merge workflow. The first GitHub CI run must establish the required check.
 
 Container images declared inside Kubernetes manifests are pinned separately and need review; the Docker Dependabot ecosystem updates Dockerfile base images, not those embedded manifest image references.
+
+## Build the tutorial site
+
+The GitHub Pages site provides local setup, OpenShift installation, the investigation walkthrough, governance, agent implementation, API reference, troubleshooting, and a presenter playbook. It uses a distinct navy-and-mint tutorial design with the shared expandable paper diagrams.
+
+```bash
+python3.13 -m venv .docs-venv
+source .docs-venv/bin/activate
+pip install -r requirements-docs.txt
+mkdocs serve
+# Or validate the static output:
+mkdocs build --strict
+npx playwright test -c playwright.docs.config.js
+```
+
+The Pages workflow builds and browser-tests the site before publishing main. Documentation dependencies receive daily Dependabot checks. The build hook copies the exact Mermaid renderer and solid-fill adapter from the SPA, so the site and demo retain the same diagram behavior.
 
 ## Diagram style
 

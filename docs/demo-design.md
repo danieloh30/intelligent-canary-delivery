@@ -1,23 +1,54 @@
-# Presenter design notes
+# Presenter playbook
 
-The audience should repeatedly answer: **Would you give this release more traffic?**
+Keep asking the same question: **would you give this release more traffic?** The 10-minute version tells a complete story. The 15-minute version adds depth to the same decisions.
 
-The demonstration teaches three distinct skills:
+## Before the audience arrives
 
-- Platform engineers provide a shared investigation service with central policies and scoped identities.
-- AI engineers compose bounded specialists, preserve evidence identity, represent uncertainty, and keep authority outside model output.
-- Developers change a release in Git and receive a short explanation tied to the behavior of their application.
+- Confirm the actual cluster baseline is healthy and traffic is flowing.
+- Verify a real GPT-4o mini investigation and all required tools.
+- Check the current operator's controller labels and log access.
+- Rehearse clearing the fault and draining the 60-second observation window.
+- Prepare the explicitly labeled local rehearsal as a fallback.
+- Start the SPA timer when the demonstration begins, not during setup.
 
-## Improve through rehearsal
+## The 10-minute core
 
-Measure actual time spent on model calls, observation windows, Git reconciliation, and controller transitions. Tune synthetic request rate and presentation pacing from measurements. Never shorten the evidence window or relax policy just to make the stage demonstration pass.
+| Time | Scene | Audience question |
+| --- | --- | --- |
+| 0:00–1:00 | Show the baseline and start v2 | What evidence would justify more traffic? |
+| 1:00–3:30 | Shared slowdown, HOLD, recovery, GO | Did this release cause the latency increase? |
+| 3:30–7:30 | v3 retry regression, investigation, NO-GO | Can successful requests conceal extra dependency work? |
+| 7:30–9:00 | Evidence and policy record | Why should the platform trust this recommendation? |
+| 9:00–10:00 | Git change and shared template | What does an application team need to adopt this? |
 
-Evaluate these cases before presenting: healthy candidate, shared slowdown, canary-only retries, missing traces, sparse traffic, expired evidence, incorrect revision, repeated releases of the same version, production approval, model outage, and controller API outage.
+Model calls, controller reconciliation, and observation windows consume real time. Measure these on your cluster. If the timing cannot fit, shorten optional narration or enter at the prepared retry scenario; do not weaken the evidence or bypass the gate.
 
-Record recommendation accuracy, evidence-reference validity, investigation latency, tool count, and model usage separately. Do not invent model confidence scores or claim milliseconds without measurements.
+## Add five minutes
 
-## Scope boundaries
+### Two minutes: follow the investigation
 
-This project demonstrates a bounded decision loop in one cluster. It does not establish multi-cluster scalability, production SLO guarantees, prompt-injection immunity, durable audit retention, or a universal causal diagnosis engine. Shared tools and policy contracts are the scaling mechanism to explain to the audience.
+Expand the agent workflow diagram. Open one request observation, follow its trace ID in Jaeger, and match it to the retry log record. Show the relevant `@Agent` and `@ToolBox` definitions.
 
-A future iteration can add revision-specific Prometheus queries, a Loki query adapter, complete trace-tree retrieval, a versioned evidence archive, and policy-as-code distribution. Add each only when it strengthens the on-stage decision or the developer experience.
+### Three minutes: govern autonomy
+
+Apply Production policy to a healthy candidate. Show a GO recommendation held pending approval. Demonstrate that missing evidence still blocks promotion, even when someone wants the rollout to proceed.
+
+## Tell each audience what changed
+
+**Platform engineers:** the organization provides a shared investigation service, central policy, scoped access, and a reusable AnalysisTemplate.
+
+**AI engineers:** the system composes bounded specialists, preserves evidence identity and memory isolation, validates tool use, and records uncertainty.
+
+**Developers:** a small Git release change produces a decision they can inspect, with an explanation of the observed application behavior.
+
+## Rehearse failure as deliberately as success
+
+Verify healthy candidates, shared latency, canary retries, missing traces, sparse traffic, expired evidence, repeated releases, wrong-stage decisions, model outages, and unavailable controller APIs.
+
+Measure recommendation quality, evidence-reference validity, investigation latency, and tool count separately. The current records do not expose a complete token-cost accounting system, so do not present an invented ROI or confidence score.
+
+## Keep the scope honest
+
+This is a bounded decision loop in one cluster. It demonstrates a platform contract; it does not establish multi-cluster scalability, universal causal diagnosis, durable audit retention, or production reliability guarantees.
+
+Shared tools and policies explain how teams can adopt the approach. Add full trace-tree queries, an external log adapter, a versioned evidence archive, and policy distribution when those additions strengthen the decision or developer experience.
