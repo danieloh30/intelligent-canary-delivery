@@ -67,3 +67,5 @@ Live GPT-4o mini behavior still requires an API key and a separate integration r
 ## Source layout
 
 Production code is organized into `dev.danieloh.canary.agentic`, `.model`, `.resource`, and `.service`. The agentic package contains the declarative workflow and toolboxes; model holds shared records and evaluation state; resource exposes HTTP boundaries and API authentication; service owns orchestration, policy, evidence collection, cluster access, and workload traffic. Tests mirror these boundaries, with the OpenAI protocol stub in a test-only support package.
+
+The release metadata tool also includes the same frozen stable/canary signals, request counts, capture time, and missing-evidence list used by the investigation. This lets the release analyst test runbook prerequisites against facts rather than inferring missing data from another agent’s prose. General runbook cautions do not constitute an unresolved limitation by themselves; actual missing or contradictory evidence still causes HOLD through the existing policy checks.
