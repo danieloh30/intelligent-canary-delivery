@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Open presenter tabs without printing credentials or writing them to disk."""
 import argparse
-import base64
 import os
 import subprocess
 import webbrowser
@@ -30,16 +29,15 @@ def main(arguments=None):
             else:
                 namespace = os.environ.get('DEMO_NAMESPACE', 'canary-demo')
                 host = oc('-n', namespace, 'get', 'route', 'canary-control', '-o', 'jsonpath={.spec.host}')
-                encoded = oc('-n', namespace, 'get', 'secret', 'canary-secrets', '-o', 'jsonpath={.data.api-token}')
-                token = base64.b64decode(encoded, validate=True).decode()
-                if not host or not token:
-                    raise ValueError('Route or presenter credential missing')
+                if not host:
+                    raise ValueError('Route missing')
+                token = ''
                 origin = f'https://{host}'
             # Fragments are not sent in HTTP requests. The SPA consumes this once,
             # removes it from the address bar, and uses tab-scoped sessionStorage.
-            if not webbrowser.open(origin + '/#' + urlencode({'access': token}), new=2):
+            if not webbrowser.open(origin + ('/#' + urlencode({'access': token}) if token else '/'), new=2):
                 raise RuntimeError('Browser unavailable')
-            print('Opened the decision room with presenter access.')
+            print('Opened the decision room. OpenShift uses SSO; local mode uses presenter access.')
         if args.target in ('argo', 'present'):
             namespace = os.environ.get('GITOPS_NAMESPACE', 'openshift-gitops')
             host = oc('-n', namespace, 'get', 'route', 'openshift-gitops-server', '-o', 'jsonpath={.spec.host}')

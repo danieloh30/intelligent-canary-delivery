@@ -99,7 +99,26 @@ oc -n "$NS" start-build canary-demo --from-archive="$work/source.tar.gz" --follo
 digest=$(oc -n "$NS" get imagestreamtag canary-demo:latest -o jsonpath='{.image.metadata.name}')
 [[ "$digest" == sha256:* ]] || { echo 'Build did not produce an immutable image digest.' >&2; exit 1; }
 image="image-registry.openshift-image-registry.svc:5000/$NS/canary-demo@$digest"
-mkdir "$work/base"
+# OpenShift SSO keeps the presenter credential entirely inside the pod.
+if ! oc -n "$NS" get secret canary-oauth >/dev/null 2>&1; then
+  python3 -c 'import base64,secrets; print(base64.b64encode(secrets.token_bytes(32)).decode(),end="")' > "$work/cookie-secret"
+  oc -n "$NS" create secret generic canary-oauth --from-file="$work/cookie-secret" --dry-run=client -o yaml | oc apply -f -
+fi
+presenter=${DEMO_PRESENTER_USER:-$(oc whoami)}
+if ! oc get group canary-demo-presenters >/dev/null 2>&1; then oc adm groups new canary-demo-presenters; fi
+oc adm groups add-users canary-demo-presenters "$presenter"
+oauth_image=${OAUTH_PROXY_IMAGE:-$(oc -n openshift get imagestream oauth-proxy -o jsonpath='{.status.tags[0].items[0].dockerImageReference}')}
+[[ -n "$oauth_image" ]] || { echo 'Set OAUTH_PROXY_IMAGE to the cluster-compatible OpenShift OAuth proxy image.' >&2; exit 1; }
+mkdir "$work/base" "$work/openshift"
+cp deploy/openshift/*.yaml "$work/openshift/"
+OAUTH_IMAGE="$oauth_image" SSO_FILE="$work/openshift/sso-control.yaml" python3 - <<'PYSSO'
+import json,os
+from pathlib import Path
+p=Path(os.environ['SSO_FILE']);d=json.loads(p.read_text())
+for container in d['spec']['template']['spec']['containers']:
+    if container['name']=='oauth-proxy':container['image']=os.environ['OAUTH_IMAGE']
+p.write_text(json.dumps(d,indent=2)+'\n')
+PYSSO
 cp deploy/base/*.yaml "$work/base/"
 IMAGE_REF="$image" PLATFORM_FILE="$work/base/platform.yaml" python3 - <<'PYCODE'
 import os
@@ -107,8 +126,7 @@ from pathlib import Path
 p=Path(os.environ['PLATFORM_FILE'])
 p.write_text(p.read_text().replace('image-registry.openshift-image-registry.svc:5000/canary-demo/canary-demo:latest',os.environ['IMAGE_REF']))
 PYCODE
-oc -n "$NS" apply -k "$work/base"
-oc -n "$NS" apply -f deploy/openshift/route.yaml
+oc -n "$NS" apply -k "$work/openshift"
 # Permit bounded Argo CD status/log reads; this does not grant deployment writes.
 cat <<YAML | oc apply -f -
 apiVersion: rbac.authorization.k8s.io/v1

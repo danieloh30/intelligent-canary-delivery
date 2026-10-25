@@ -40,3 +40,24 @@ test('deployed hostname requires access and launcher credential takes precedence
  await expect(page.locator('#access-dialog')).not.toBeVisible();
  expect(new URL(page.url()).hash).toBe('');
 });
+
+test('OpenShift SSO connects a direct route with cookies and no presenter token',async({page,baseURL})=>{
+ const headers=[];
+ await page.route('https://sso.example.test/**',async route=>{
+  const path=new URL(route.request().url()).pathname;
+  if(path.startsWith('/api/')){
+   headers.push(route.request().headers().authorization);
+   if(path.startsWith('/api/logs/'))return route.fulfill({json:['SSO controller logs']});
+   return route.fulfill({json:{mode:'live',clusterEnabled:true,latest:{},events:[],connected:true}});
+  }
+  await route.fulfill({response:await route.fetch({url:baseURL+path})});
+ });
+ await page.goto('https://sso.example.test/');
+ await expect(page.locator('#connection')).toHaveText('Kubernetes connected');
+ await expect(page.locator('#access-dialog')).not.toBeVisible();
+ expect(await page.evaluate(()=>sessionStorage.getItem('canary-token'))).toBeNull();
+ await page.getByRole('button',{name:'Live console'}).click();
+ await page.locator('#log-source').selectOption('argocd');
+ await expect(page.locator('#console')).toContainText('SSO controller logs');
+ expect(headers.every(value=>value===undefined)).toBeTruthy();
+});

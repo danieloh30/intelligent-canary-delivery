@@ -25,7 +25,7 @@ class OpenDemoTest(unittest.TestCase):
         self.assertEqual({'check': True, 'capture_output': True, 'text': True}, kwargs)
         self.assertNotIn(self.token, ' '.join(command))
         if 'secret' in command:
-            return SimpleNamespace(stdout=base64.b64encode(self.token.encode()).decode() + '\n')
+            self.fail('Cluster SSO launch must never read a presenter Secret')
         if 'canary-control' in command:
             return SimpleNamespace(stdout='decision-room.example.test\n')
         if 'openshift-gitops-server' in command:
@@ -36,22 +36,21 @@ class OpenDemoTest(unittest.TestCase):
         self.assertNotIn(self.token, output)
         self.assertNotIn(base64.b64encode(self.token.encode()).decode(), output)
 
-    def test_cluster_open_reads_exact_route_and_secret_without_printing_token(self):
+    def test_cluster_open_reads_only_route_and_uses_sso_without_url_credential(self):
         output = io.StringIO()
-        with patch.dict(os.environ, {'DEMO_NAMESPACE': 'presenter-demo'}, clear=True), \
+        with patch.dict(os.environ, {'DEMO_NAMESPACE': 'presenter-demo', 'DEMO_API_TOKEN': self.token}, clear=True), \
              patch.object(LAUNCHER.subprocess, 'run', side_effect=self.cluster_response) as command, \
              patch.object(LAUNCHER.webbrowser, 'open', return_value=True) as browser, \
              contextlib.redirect_stdout(output):
             LAUNCHER.main(['open'])
         self.assertEqual([
             ['oc', '-n', 'presenter-demo', 'get', 'route', 'canary-control', '-o', 'jsonpath={.spec.host}'],
-            ['oc', '-n', 'presenter-demo', 'get', 'secret', 'canary-secrets', '-o', 'jsonpath={.data.api-token}'],
         ], [call.args[0] for call in command.call_args_list])
         browser.assert_called_once()
         url = urlsplit(browser.call_args.args[0])
         self.assertEqual(('https', 'decision-room.example.test', '/', ''),
                          (url.scheme, url.netloc, url.path, url.query))
-        self.assertEqual({'access': [self.token]}, parse_qs(url.fragment))
+        self.assertEqual('', url.fragment)
         self.assertEqual({'new': 2}, browser.call_args.kwargs)
         self.assert_private_output(output.getvalue())
 
@@ -86,7 +85,8 @@ class OpenDemoTest(unittest.TestCase):
             LAUNCHER.main(['present'])
         self.assertEqual(2, browser.call_count)
         decision, argo = [urlsplit(call.args[0]) for call in browser.call_args_list]
-        self.assertEqual({'access': [self.token]}, parse_qs(decision.fragment))
+        self.assertEqual(('https', 'decision-room.example.test', '/', '', ''),
+                         (decision.scheme, decision.netloc, decision.path, decision.query, decision.fragment))
         self.assertEqual(('https', 'argocd.example.test', '/applications', '', ''),
                          (argo.scheme, argo.netloc, argo.path, argo.query, argo.fragment))
         self.assertEqual(['oc', '-n', 'team-gitops', 'get', 'route',

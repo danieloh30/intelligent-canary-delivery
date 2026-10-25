@@ -113,3 +113,7 @@ bash scripts/configure-argocd-access.sh admin
 ```
 
 Then **sign out of Argo CD and log in via OpenShift again**. Refreshing the browser alone retains old group claims. In Argo CD User Info, verify that your SSO groups include `canary-demo-viewers`. If installing through a service account, set `DEMO_PRESENTER_USER` to the intended human username first.
+
+## Dashboard direct URL asks for a presenter token
+
+The OpenShift installation must use the `deploy/openshift` overlay, which adds the OAuth proxy, ServiceAccount redirect reference, presenter RBAC, and Route target `oauth` (4180). Applying only `deploy/base` exposes the plain token-protected backend and does not enable SSO. Re-run the installer after updating the repository. Direct visits should redirect to OpenShift login/consent and return to the dashboard without the token dialog. The backend token remains in the pod, not in browser storage. Argo analysis continues to use internal Service port 8080. Check the `oauth-proxy` container logs and membership of `canary-demo-presenters` if login is denied.

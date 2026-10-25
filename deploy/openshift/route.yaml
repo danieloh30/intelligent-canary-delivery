@@ -10,7 +10,7 @@
       "name": "canary-control"
     },
     "port": {
-      "targetPort": "http"
+      "targetPort": "oauth"
     },
     "tls": {
       "termination": "edge",

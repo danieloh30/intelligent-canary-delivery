@@ -101,3 +101,7 @@ You have a synchronized baseline, flowing synthetic traffic, available telemetry
 </div>
 
 Continue to [investigate a release](03-investigate.md).
+
+## Open the dashboard through OpenShift SSO
+
+Visit the dashboard Route directly or run `./demo.sh present` to open it alongside Argo CD. The installer configures an OpenShift OAuth proxy and presenter access for `DEMO_PRESENTER_USER` (the installing human user by default). Complete OpenShift login or first-use consent if prompted; an existing OpenShift session is reused. You do not enter or retrieve a presenter token for the OpenShift dashboard. The browser uses its SSO cookie, while the backend API credential remains inside the pod. Local development continues to use its separate development credential.

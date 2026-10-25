@@ -260,11 +260,13 @@ Argo CD UI access is configured separately from Kubernetes RBAC. Installation gr
 
 ```bash
 ./demo.sh open --local   # local app; uses DEMO_PORT (8095 by default)
-./demo.sh open           # OpenShift dashboard with the Secret credential
+./demo.sh open           # OpenShift dashboard; automatic OpenShift SSO
 ./demo.sh argo           # Argo CD; normal OpenShift SSO
 ./demo.sh present        # dashboard + Argo CD, ready for the live demo
 ```
 
-Localhost automatically tries the development token `demo-local`. For a custom local `DEMO_API_TOKEN`, use the local launcher. On OpenShift, the launcher reads the route and `canary-secrets` using your existing `oc` login; it does not change API authorization. It passes access through a URL fragment, which is not sent to the server, and the SPA immediately removes it from the address bar and stores it only in that tab’s session storage. The token is not printed or written to disk. Treat the handoff as a credential: do not copy/share the launch URL or record the browser during launch. The manual dialog remains available for direct route visits or expired access. Argo CD uses its separate SSO session.
+Localhost automatically tries the development token `demo-local`. For a custom local `DEMO_API_TOKEN`, use the local launcher. On OpenShift, direct visits to the dashboard use OpenShift OAuth. The proxy checks whether your OpenShift user can get the `canary-control` Service in `canary-demo`; installation grants that permission to the chosen user through `canary-demo-presenters`. Your existing OpenShift session is reused; the first visit can require OpenShift login or OAuth consent. There is no presenter-token dialog on the authenticated route, and the browser never receives the backend API credential. The OAuth proxy forwards an authenticated username plus the Secret credential to the loopback backend. Proxy authentication is enabled only in the OpenShift overlay; Argo analysis retains its internal Bearer credential. Argo CD continues to use its separate SSO client.
+
+The launcher no longer reads Kubernetes Secrets on OpenShift. Local mode still supports the known development credential or an exported custom `DEMO_API_TOKEN`; a local handoff fragment is consumed and removed immediately. API authorization remains enabled. The manual token dialog remains a fallback for deployments without the SSO overlay.
 
 The core flow now explicitly visits Argo CD at baseline (Git revision and resource tree), recovered GO (Successful AnalysisRun and promotion), and NO-GO (Failed AnalysisRun, aborted Rollout, stable ReplicaSet). Prepare both tabs before starting the 10/15-minute timer.

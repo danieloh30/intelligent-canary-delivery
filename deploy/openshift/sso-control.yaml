@@ -1,0 +1,99 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "canary-control"
+  },
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [
+          {
+            "name": "canary-control",
+            "env": [
+              {
+                "name": "DEMO_PROXY_AUTH_ENABLED",
+                "value": "true"
+              }
+            ]
+          },
+          {
+            "name": "oauth-proxy",
+            "image": "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:1a66549cdd8c5c0bb134f80be3135f426f170e3f465d226082f5b7a150d1d7ef",
+            "ports": [
+              {
+                "name": "oauth",
+                "containerPort": 4180
+              }
+            ],
+            "args": [
+              "--provider=openshift",
+              "--openshift-service-account=canary-control",
+              "--openshift-sar={\"namespace\":\"canary-demo\",\"resource\":\"services\",\"resourceName\":\"canary-control\",\"verb\":\"get\"}",
+              "--http-address=:4180",
+              "--https-address=",
+              "--upstream=http://127.0.0.1:8080/",
+              "--cookie-secret-file=/etc/oauth/cookie-secret",
+              "--pass-basic-auth=true",
+              "--basic-auth-password=$(DEMO_API_TOKEN)",
+              "--pass-access-token=false",
+              "--skip-provider-button=true",
+              "--approval-prompt=auto"
+            ],
+            "env": [
+              {
+                "name": "DEMO_API_TOKEN",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "canary-secrets",
+                    "key": "api-token"
+                  }
+                }
+              }
+            ],
+            "volumeMounts": [
+              {
+                "name": "oauth-cookie",
+                "mountPath": "/etc/oauth",
+                "readOnly": true
+              }
+            ],
+            "readinessProbe": {
+              "tcpSocket": {
+                "port": "oauth"
+              },
+              "initialDelaySeconds": 3,
+              "periodSeconds": 5
+            },
+            "resources": {
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              },
+              "limits": {
+                "cpu": "200m",
+                "memory": "128Mi"
+              }
+            },
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            }
+          }
+        ],
+        "volumes": [
+          {
+            "name": "oauth-cookie",
+            "secret": {
+              "secretName": "canary-oauth"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "apiVersion": "v1",
+  "kind": "ServiceAccount",
+  "metadata": {
+    "name": "canary-control",
+    "annotations": {
+      "serviceaccounts.openshift.io/oauth-redirectreference.canary-control": "{\"kind\": \"OAuthRedirectReference\", \"apiVersion\": \"v1\", \"reference\": {\"kind\": \"Route\", \"name\": \"canary-control\"}}"
+    }
+  }
+}

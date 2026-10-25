@@ -10,7 +10,7 @@ if(token)sessionStorage.setItem('canary-token',token);
 function text(el,value){el.textContent=value;}
 function notice(message){$('#notice').hidden=!message;text($('#notice'),message||'');}
 async function api(path,method='GET'){
- const response=await fetch('/api'+path,{method,headers:{Authorization:'Bearer '+token}});
+ const response=await fetch('/api'+path,{method,headers:token?{Authorization:'Bearer '+token}:{}});
  if(response.status===401){text($('#connection'),'Access required');if(!$('#access-dialog').open)$('#access-dialog').showModal();throw new Error('Enter a valid presenter token.');}
  if(!response.ok){let body=await response.text();throw new Error(body.slice(0,180)||`Request failed (${response.status})`);}
  return response.json();
@@ -51,7 +51,7 @@ function renderEvidence(e){
  for(const [name,f]of Object.entries(e.findings||{})){const section=document.createElement('section');section.className='finding';const h=document.createElement('h3');h.textContent=names[name];const p=document.createElement('p');p.textContent=f.summary;section.append(h,p);host.append(section);}
  for(const [title,body]of blocks){const section=document.createElement('section');section.className='evidence-block';const h=document.createElement('h3');h.textContent=title;const pre=document.createElement('pre');pre.textContent=body;section.append(h,pre);host.append(section);}
 }
-async function poll(){if(!token)return;try{state=await api('/state');render();if(state.clusterEnabled&&Date.now()-lastCluster>8000){lastCluster=Date.now();const c=await api('/cluster');if(!c.connected){text($('#connection'),'Cluster unavailable');notice(c.message);}else{const r=c.rollout?.status||{};text($('#rollout-phase'),r.phase||'Reconciling');const weight=r.canary?.weights?.canary?.weight;$('#traffic-weight').style.width=(weight??0)+'%';text($('#traffic-caption'),weight===undefined?'Traffic managed by Argo Rollouts':`${weight}% canary / ${100-weight}% stable`);}}}catch(e){notice(e.message);}}
+async function poll(){try{state=await api('/state');render();if(state.clusterEnabled&&Date.now()-lastCluster>8000){lastCluster=Date.now();const c=await api('/cluster');if(!c.connected){text($('#connection'),'Cluster unavailable');notice(c.message);}else{const r=c.rollout?.status||{};text($('#rollout-phase'),r.phase||'Reconciling');const weight=r.canary?.weights?.canary?.weight;$('#traffic-weight').style.width=(weight??0)+'%';text($('#traffic-caption'),weight===undefined?'Traffic managed by Argo Rollouts':`${weight}% canary / ${100-weight}% stable`);}}}catch(e){notice(e.message);}}
 async function action(fn){busy=true;$('#evaluate').disabled=true;try{await fn();await poll();}catch(e){notice(e.message);}finally{busy=false;$('#evaluate').disabled=state.latest?.status==='RUNNING';}}
 function selectScene(value){scene=value;document.querySelectorAll('[data-scene]').forEach(b=>b.classList.toggle('selected',b.dataset.scene===scene));text($('#scene-question'),stories[scene][0]);text($('#scene-description'),stories[scene][1]);$('#revision').value=scene==='retry'?'v3':'v2';}
 document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;document.querySelectorAll('.tab').forEach(p=>p.classList.toggle('active',p.id===tab));document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b===button));if(tab==='logs')logs();if(tab==='architecture'){if(!window.canaryDiagramsLoaded){window.canaryDiagramsLoaded=true;const script=document.createElement('script');script.src='/diagrams.js';document.body.append(script);}else document.dispatchEvent(new Event('canary-diagrams-visible'));}}));
@@ -65,7 +65,7 @@ $('#timer').addEventListener('click',()=>{ticking=!ticking;text($('#timer'),tick
 setInterval(()=>{if(!ticking)return;elapsed++;text($('#clock'),String(Math.floor(elapsed/60)).padStart(2,'0')+':'+String(elapsed%60).padStart(2,'0'));$('#clock').classList.toggle('bad',elapsed>Number($('#duration').value)*60);},1000);
 $('#download').addEventListener('click',()=>{if(!state.latest?.id){notice('Run an investigation first.');return;}const blob=new Blob([JSON.stringify(state.latest,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='canary-decision-'+state.latest.id+'.json';a.click();URL.revokeObjectURL(a.href);});
 $('#pause-logs').addEventListener('click',()=>{paused=!paused;text($('#pause-logs'),paused?'Resume updates':'Pause updates');});
-async function logs(){if(tab!=='logs'||paused||!token)return;const source=$('#log-source').value;if(source==='agents'){render();return;}try{text($('#console'),(await api('/logs/'+source)).join('\n'));}catch(e){notice(e.message);}}
+async function logs(){if(tab!=='logs'||paused)return;const source=$('#log-source').value;if(source==='agents'){render();return;}try{text($('#console'),(await api('/logs/'+source)).join('\n'));}catch(e){notice(e.message);}}
 $('#log-source').addEventListener('change',logs);
 window.addEventListener('hashchange',()=>{const value=consumeAccess();if(!value)return;token=value;sessionStorage.setItem('canary-token',token);if($('#access-dialog').open)$('#access-dialog').close();poll();});
-agentCards();poll();if(!token)$('#access-dialog').showModal();setInterval(poll,2000);setInterval(logs,4000);
+agentCards();poll();setInterval(poll,2000);setInterval(logs,4000);
