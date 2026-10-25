@@ -117,3 +117,28 @@ Then **sign out of Argo CD and log in via OpenShift again**. Refreshing the brow
 ## Dashboard direct URL asks for a presenter token
 
 The OpenShift installation must use the `deploy/openshift` overlay, which adds the OAuth proxy, ServiceAccount redirect reference, presenter RBAC, and Route target `oauth` (4180). Applying only `deploy/base` exposes the plain token-protected backend and does not enable SSO. Re-run the installer after updating the repository. Direct visits should redirect to OpenShift login/consent and return to the dashboard without the token dialog. The backend token remains in the pod, not in browser storage. Argo analysis continues to use internal Service port 8080. Check the `oauth-proxy` container logs and membership of `canary-demo-presenters` if login is denied.
+
+## OTLP export says connection refused on jaeger:4317
+
+Check Jaeger before changing the exporter address:
+
+```bash
+oc -n canary-demo get pods -l app=jaeger
+oc -n canary-demo get pod YOUR_JAEGER_POD -o jsonpath='{.status.containerStatuses[0].lastState}'
+oc -n canary-demo logs deployment/jaeger --tail=50
+```
+
+A receiver restart temporarily refuses connections even when DNS and Service ports are correct. During the live rehearsal, Jaeger had been OOMKilled after an unbounded in-memory trace store reached its 512 MiB container limit. The manifest now caps retention with `--memory.max-traces=10000`, sets `GOMEMLIMIT=384MiB`, and probes startup/admin health and OTLP readiness. The Go setting is a soft memory budget; the container limit remains 512 MiB. These bounds suit the demo's recent observation window, not durable trace archival. Old traces are evicted as the count fills, and all in-memory traces disappear on restart.
+
+After applying the updated observability manifest through the installer, confirm a fresh trace is searchable in Jaeger and watch restart counts and exporter logs. A brief export warning can still occur while a receiver starts or restarts; repeated warnings need investigation. Request observations used by the agents and the complete spans exported to Jaeger are separate evidence paths.
+
+## Fabric8 reports unstable v1alpha1 for Argo resources
+
+The installed Argo Rollouts and Argo CD CRDs serve and store `v1alpha1`. Fabric8 emits a version-name warning for these resources even when requests succeed. This is not a connection, authorization, or rollout failure. Confirm the actual versions before attempting to change the client:
+
+```bash
+oc get crd rollouts.argoproj.io applications.argoproj.io \
+  -o jsonpath='{range .items[*]}{.metadata.name}{": "}{range .spec.versions[*]}{.name}{" served="}{.served}{" storage="}{.storage}{"; "}{end}{"\n"}{end}'
+```
+
+Use the version served by the installed CRD; changing this demo to a nonexistent `v1` API would break resource reads.

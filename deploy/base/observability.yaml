@@ -162,14 +162,24 @@
               {
                 "name": "COLLECTOR_OTLP_ENABLED",
                 "value": "true"
+              },
+              {
+                "name": "GOMEMLIMIT",
+                "value": "384MiB"
               }
             ],
             "ports": [
               {
+                "name": "query",
                 "containerPort": 16686
               },
               {
+                "name": "otlp",
                 "containerPort": 4317
+              },
+              {
+                "name": "admin",
+                "containerPort": 14269
               }
             ],
             "securityContext": {
@@ -193,6 +203,35 @@
                 "cpu": "1",
                 "memory": "512Mi"
               }
+            },
+            "args": [
+              "--memory.max-traces=10000"
+            ],
+            "startupProbe": {
+              "httpGet": {
+                "path": "/",
+                "port": "admin"
+              },
+              "periodSeconds": 2,
+              "timeoutSeconds": 2,
+              "failureThreshold": 30
+            },
+            "readinessProbe": {
+              "tcpSocket": {
+                "port": "otlp"
+              },
+              "periodSeconds": 5,
+              "timeoutSeconds": 2,
+              "failureThreshold": 2
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/",
+                "port": "admin"
+              },
+              "periodSeconds": 10,
+              "timeoutSeconds": 3,
+              "failureThreshold": 3
             }
           }
         ]

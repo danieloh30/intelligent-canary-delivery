@@ -291,3 +291,5 @@ npm run screenshots
 ```
 
 Use `DEMO_URL` and `DEMO_API_TOKEN` if you changed the local URL or credential. Capture refuses to run unless the server reports fixture mode with cluster actions disabled. Cluster screenshots are recorded from the actual OpenShift and Argo CD UI; they are not synthesized by the fixture script.
+
+Jaeger uses a bounded in-memory store of 10,000 traces, a `384MiB` Go soft memory budget inside its `512Mi` container limit, and startup/readiness/liveness probes. Trace retention is count-based and ephemeral; recent demo traces remain searchable, while old traces are evicted and restarts clear storage. See troubleshooting for OTLP receiver restarts and expected Fabric8 notices about Argo’s served `v1alpha1` APIs.
