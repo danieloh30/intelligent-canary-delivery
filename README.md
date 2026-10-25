@@ -1,5 +1,7 @@
 # Intelligent Canary Delivery
 
+[![Deploy docs to GitHub Pages](https://img.shields.io/github/actions/workflow/status/danieloh30/intelligent-canary-delivery/docs.yml?branch=main&label=Deploy%20docs%20to%20GitHub%20Pages&logo=github)](https://github.com/danieloh30/intelligent-canary-delivery/actions/workflows/docs.yml)
+
 **From Static Rules to Reasoning Platforms: Scaling Intelligent Canary Delivery in 2026**
 
 **[Read the step-by-step tutorial](https://danieloh30.github.io/intelligent-canary-delivery/)**
