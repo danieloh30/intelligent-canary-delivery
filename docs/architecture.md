@@ -77,3 +77,9 @@ flowchart TD
     style YES fill:#D8F0D8,stroke:#3D7A3D,color:#1F1F1F,stroke-width:2px
     style NO fill:#E8DCC4,stroke:#000000,color:#1F1F1F,stroke-width:2px
 ```
+
+## OpenShift Topology
+
+The `canary-delivery` application group contains the reasoning service, traffic generator, inventory, and checkout Rollout. `canary-observability` contains Prometheus and Jaeger. `app.openshift.io/connects-to` annotations describe traffic → checkout, checkout → inventory, reasoning → checkout/inventory, Prometheus scrape targets, and Java trace export to Jaeger. Arrows describe logical relationships; they do not configure routing or network policy.
+
+Some console versions do not render an Argo Rollout node. Its connections are declared but cannot be drawn without a visible target. Use Argo CD’s resource tree for the real Rollout/ReplicaSets/AnalysisRuns and the SPA architecture diagram for the complete path. The reasoning agents currently read frozen checkout observations rather than querying Prometheus or complete Jaeger trace trees.

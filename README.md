@@ -270,3 +270,9 @@ Localhost automatically tries the development token `demo-local`. For a custom l
 The launcher no longer reads Kubernetes Secrets on OpenShift. Local mode still supports the known development credential or an exported custom `DEMO_API_TOKEN`; a local handoff fragment is consumed and removed immediately. API authorization remains enabled. The manual token dialog remains a fallback for deployments without the SSO overlay.
 
 The core flow now explicitly visits Argo CD at baseline (Git revision and resource tree), recovered GO (Successful AnalysisRun and promotion), and NO-GO (Failed AnalysisRun, aborted Rollout, stable ReplicaSet). Prepare both tabs before starting the 10/15-minute timer.
+
+### OpenShift Topology groups and connections
+
+Workload metadata groups checkout, inventory, traffic generation, and the reasoning service under `canary-delivery`; Prometheus and Jaeger appear under `canary-observability`. Structured `app.openshift.io/connects-to` annotations describe checkout traffic, evidence/fault dependencies, metric scraping, and trace export. These are visual relationships, not network policies or a claim that the agent queries Prometheus or Jaeger directly. The current agent collects trace-linked request observations from checkout pods.
+
+The console may omit the custom Argo Rollout checkout node; connections targeting it are visible only when that node is supported. Show the complete release resource tree in Argo CD and the full logical architecture in the SPA. The metadata uses workload labels and annotations, so applying this presentation change does not restart pods or initiate a new canary.

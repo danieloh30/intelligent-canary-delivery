@@ -13,7 +13,16 @@
   "apiVersion": "apps/v1",
   "kind": "Deployment",
   "metadata": {
-    "name": "prometheus"
+    "name": "prometheus",
+    "labels": {
+      "app.kubernetes.io/part-of": "canary-observability",
+      "app.kubernetes.io/component": "metrics",
+      "app.openshift.io/runtime": "prometheus"
+    },
+    "annotations": {
+      "app.openshift.io/connects-to": "[{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"name\":\"canary-control\"},{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"name\":\"inventory\"},{\"apiVersion\":\"argoproj.io/v1alpha1\",\"kind\":\"Rollout\",\"name\":\"checkout\"}]",
+      "app.openshift.io/custom-icon": "https://raw.githubusercontent.com/cncf/artwork/main/projects/prometheus/icon/color/prometheus-icon-color.svg"
+    }
   },
   "spec": {
     "replicas": 1,
@@ -120,7 +129,15 @@
   "apiVersion": "apps/v1",
   "kind": "Deployment",
   "metadata": {
-    "name": "jaeger"
+    "name": "jaeger",
+    "labels": {
+      "app.kubernetes.io/part-of": "canary-observability",
+      "app.kubernetes.io/component": "tracing",
+      "app.openshift.io/runtime": "jaeger"
+    },
+    "annotations": {
+      "app.openshift.io/custom-icon": "https://raw.githubusercontent.com/cncf/artwork/main/projects/jaeger/icon/color/jaeger-icon-color.svg"
+    }
   },
   "spec": {
     "replicas": 1,
