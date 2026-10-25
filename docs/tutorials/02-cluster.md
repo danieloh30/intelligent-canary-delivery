@@ -64,6 +64,15 @@ Secrets pass through private temporary files and Kubernetes Secrets. They do not
 
 Check that the Argo CD Application is synchronized, the initial checkout release is healthy, and all workloads are ready. Confirm controller labels and log access; operator versions can use different labels.
 
+[![Live OpenShift Topology with delivery and observability application groups](../images/screenshots/09-topology.jpg)](../images/screenshots/09-topology.jpg)
+
+*Recorded live cluster: identify `canary-delivery` and `canary-observability`, the runtime logos, and declared connections. The checkout Rollout may be absent from the console Topology view; it is visible in Argo CD. Click any screenshot to inspect the full-resolution image.*
+
+[![Live Argo CD resource tree showing the healthy checkout Rollout and AnalysisTemplate](../images/screenshots/10-argo-tree.jpg)](../images/screenshots/10-argo-tree.jpg)
+
+*Recorded live cluster after baseline recovery: point to Healthy, Synced, the Git revision, `reasoning-gate`, the checkout Rollout, and its ReplicaSets/AnalysisRuns. AnalysisRun history can contain previous failed canaries even while the current release is healthy. Your revision names and timestamps will differ.*
+
+
 Retrieve the presenter token locally:
 
 ```bash

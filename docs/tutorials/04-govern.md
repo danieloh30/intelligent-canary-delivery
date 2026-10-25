@@ -10,6 +10,13 @@ Use a healthy candidate with fresh observations. Select **Production / approval*
 
 When the model recommends GO and all safety requirements pass, the effective result remains **HOLD**. The UI exposes **Approve promotion**. Approving the pending decision runs the policy checks again; it does not bypass them.
 
+<figure markdown>
+
+[![Local rehearsal showing a production GO recommendation awaiting approval](../images/screenshots/06-production-approval.png)](../images/screenshots/06-production-approval.png)
+
+<figcaption>Local rehearsal fixture: Production policy holds an otherwise healthy recommendation pending approval. This SPA capture uses deterministic fixtures, not live LLM output. Approval still rechecks evidence and policy. Select the image for full resolution.</figcaption>
+</figure>
+
 The presenter token authorizes this demonstration action. Production identity, role separation, and approval audit storage need their own implementation before using this design outside a demo.
 
 ## 2. Withhold required evidence

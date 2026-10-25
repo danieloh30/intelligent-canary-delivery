@@ -22,6 +22,13 @@ The application has three prepared behaviors:
 
 The inventory fault is deliberately controlled. It makes the pattern reproducible without waiting for an uncontrolled outage.
 
+<figure markdown>
+
+[![Local rehearsal decision room showing the healthy baseline](../images/screenshots/01-baseline.png)](../images/screenshots/01-baseline.png)
+
+<figcaption>Local rehearsal fixture: establish the baseline before injecting a fault. This SPA capture uses deterministic fixtures, not a live LLM or a live Kubernetes rollout. Select the image for full resolution.</figcaption>
+</figure>
+
 ## 2. Release v2 through Git
 
 ```bash
@@ -49,7 +56,28 @@ Both revisions should show increased inventory latency. The basic static check f
 
 The appropriate initial result is **HOLD**. A known dependency cause does not make ongoing customer degradation safe.
 
+<figure markdown>
+
+[![Local rehearsal showing a shared slowdown and an effective HOLD decision](../images/screenshots/02-shared-hold.png)](../images/screenshots/02-shared-hold.png)
+
+<figcaption>Local rehearsal fixture: the shared slowdown fails the basic latency check and produces HOLD. The capture demonstrates the decision flow without making live model calls. Select the image for full resolution.</figcaption>
+</figure>
+
 Clear the fault, let affected observations drain from the **60-second window**, and investigate again. A healthy, sufficiently sampled observation can produce GO. In the Argo CD tab, show the Successful AnalysisRun and progression to the next stage. Repeat the evaluation when the rollout reaches its 50% analysis stage; a decision cannot authorize a different stage.
+
+<figure markdown>
+
+[![Local rehearsal showing GO after the observation window has recovered](../images/screenshots/03-recovered-go.png)](../images/screenshots/03-recovered-go.png)
+
+<figcaption>Local rehearsal fixture: a healthy observation produces GO under Development policy. This illustrates the recovered state; a live rollout requires a fresh cluster investigation at its current stage. Select the image for full resolution.</figcaption>
+</figure>
+
+<figure markdown>
+
+[![Recorded live Argo CD view of a Successful AnalysisRun](../images/screenshots/07-argo-success.jpg)](../images/screenshots/07-argo-success.jpg)
+
+<figcaption>Recorded live-cluster evidence: a Successful AnalysisRun from the Kubernetes rehearsal. Inspect its metric measurement for GO. AnalysisRun names and retained history vary between rehearsals. Select the image for full resolution.</figcaption>
+</figure>
 
 ## 4. Release the retry regression
 
@@ -70,7 +98,21 @@ The expected evidence pattern is:
 
 The specialists retrieve metrics, request observations, retry records, release metadata, and operational guidance. The decision agent should recommend **NO-GO** for the canary-specific regression. Inspect the actual evidence and response rather than assuming the model will always produce the desired answer.
 
-Argo Rollouts should abort the candidate. Switch to Argo CD and open the Failed AnalysisRun. Show the aborted/degraded Rollout and the stable ReplicaSet retaining service. Confirm the same outcome in the SPA and live logs. Explain that Argo CD can remain Synced while Rollout health is Degraded: Git reconciliation and release health are different signals.
+<figure markdown>
+
+[![Local rehearsal contrasting passing HTTP checks with a NO-GO retry decision](../images/screenshots/04-retry-no-go.png)](../images/screenshots/04-retry-no-go.png)
+
+<figcaption>Local rehearsal fixture: HTTP checks pass while dependency amplification supports NO-GO. These are deterministic demonstration results, not live LLM output. Select the image for full resolution.</figcaption>
+</figure>
+
+Argo Rollouts should abort the candidate. Switch to Argo CD and open the Failed AnalysisRun. During that failed rollout, inspect the aborted/degraded Rollout and the stable ReplicaSet retaining service. Confirm the same outcome in the SPA and live logs. Explain that Argo CD can remain Synced while Rollout health is Degraded: Git reconciliation and release health are different signals. After a reset, the current application can be Healthy while the Failed AnalysisRun remains in history.
+
+<figure markdown>
+
+[![Recorded live Argo CD view of a Failed AnalysisRun from the retry regression](../images/screenshots/08-argo-failed.jpg)](../images/screenshots/08-argo-failed.jpg)
+
+<figcaption>Recorded live-cluster evidence: a Failed AnalysisRun from the retry rehearsal. Inspect its metric measurement for NO_GO. This is retained run history, not a claim that the current application is degraded; resource names vary. Select the image for full resolution.</figcaption>
+</figure>
 
 ## 5. Explain the evidence
 
@@ -84,6 +126,13 @@ Open **Evidence explorer** and identify:
 6. The independent Java policy decision.
 
 The trace tool exposes request summaries with real OTel trace IDs. Open Jaeger for complete trace trees. The agent log tool reads bounded request records; the Live Console separately retrieves actual pod logs.
+
+<figure markdown>
+
+[![Local rehearsal evidence explorer with observations and decision details](../images/screenshots/05-evidence.png)](../images/screenshots/05-evidence.png)
+
+<figcaption>Local rehearsal fixture: inspect the source label, observation window, findings, and policy result. Fixture identifiers are illustrative; use the live investigation's trace IDs when opening Jaeger on Kubernetes. Select the image for full resolution.</figcaption>
+</figure>
 
 !!! tip "A fair comparison"
     A deterministic dependency-amplification rule could detect this regression too. The demonstration teaches evidence selection, follow-up investigation, uncertainty, and a reusable policy contract. It does not claim every failure requires an LLM.

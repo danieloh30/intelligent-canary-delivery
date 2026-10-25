@@ -276,3 +276,16 @@ The core flow now explicitly visits Argo CD at baseline (Git revision and resour
 Workload metadata groups checkout, inventory, traffic generation, and the reasoning service under `canary-delivery`; Prometheus and Jaeger appear under `canary-observability`. Structured `app.openshift.io/connects-to` annotations describe checkout traffic, evidence/fault dependencies, metric scraping, and trace export. These are visual relationships, not network policies or a claim that the agent queries Prometheus or Jaeger directly. The current agent collects trace-linked request observations from checkout pods.
 
 The console may omit the custom Argo Rollout checkout node; connections targeting it are visible only when that node is supported. Show the complete release resource tree in Argo CD and the full logical architecture in the SPA. The metadata uses workload labels and annotations, so applying this presentation change does not restart pods or initiate a new canary.
+
+### Tutorial screenshots
+
+The tutorial includes real OpenShift Topology and Argo CD AnalysisRun screenshots, plus clearly labeled local rehearsal views of HOLD, GO, NO-GO, evidence, and production approval. Each figure is placed beside its demo step and opens at full resolution. Regenerate the six SPA figures against the explicit offline fixture server:
+
+```bash
+./demo.sh rehearsal             # terminal 1; default port 8095
+npm ci                         # terminal 2
+npx playwright install chromium
+npm run screenshots
+```
+
+Use `DEMO_URL` and `DEMO_API_TOKEN` if you changed the local URL or credential. Capture refuses to run unless the server reports fixture mode with cluster actions disabled. Cluster screenshots are recorded from the actual OpenShift and Argo CD UI; they are not synthesized by the fixture script.
