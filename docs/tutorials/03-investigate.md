@@ -54,6 +54,8 @@ In the UI:
 
 Both revisions should show increased inventory latency. The basic static check fails while the agents investigate whether the candidate caused the change.
 
+During the affected-window wait, open Prometheus with `./demo.sh prometheus` and compare success, mean latency, and dependency attempts across release/revision labels. Use the [copyable observability queries](../reference/observability.md); Prometheus mean latency and the SPA p95 are different statistics.
+
 The appropriate initial result is **HOLD**. A known dependency cause does not make ongoing customer degradation safe.
 
 <figure markdown>
@@ -125,7 +127,7 @@ Open **Evidence explorer** and identify:
 5. The specialist findings and final recommendation.
 6. The independent Java policy decision.
 
-The trace tool exposes request summaries with real OTel trace IDs. Open Jaeger for complete trace trees. The agent log tool reads bounded request records; the Live Console separately retrieves actual pod logs.
+The trace tool exposes request summaries with real OTel trace IDs. Run `./demo.sh jaeger` and use a recent trace ID to open the complete trace tree. Follow `inventory.reserve` spans and the `retry.attempt` attributes; see the [metrics and traces walkthrough](../reference/observability.md). The agent log tool reads bounded request records; the Live Console separately retrieves actual pod logs.
 
 <figure markdown>
 

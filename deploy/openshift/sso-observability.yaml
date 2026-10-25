@@ -1,0 +1,243 @@
+{
+  "apiVersion": "v1",
+  "kind": "ServiceAccount",
+  "metadata": {
+    "name": "prometheus",
+    "annotations": {
+      "serviceaccounts.openshift.io/oauth-redirectreference.prometheus": "{\"kind\": \"OAuthRedirectReference\", \"apiVersion\": \"v1\", \"reference\": {\"kind\": \"Route\", \"name\": \"prometheus\"}}"
+    }
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "prometheus"
+  },
+  "spec": {
+    "template": {
+      "spec": {
+        "serviceAccountName": "prometheus",
+        "automountServiceAccountToken": true,
+        "containers": [
+          {
+            "name": "prometheus",
+            "startupProbe": {
+              "httpGet": {
+                "path": "/-/ready",
+                "port": 9090
+              },
+              "periodSeconds": 2,
+              "failureThreshold": 60
+            },
+            "readinessProbe": {
+              "httpGet": {
+                "path": "/-/ready",
+                "port": 9090
+              },
+              "periodSeconds": 5
+            },
+            "livenessProbe": {
+              "httpGet": {
+                "path": "/-/healthy",
+                "port": 9090
+              },
+              "periodSeconds": 10
+            }
+          },
+          {
+            "name": "oauth-proxy",
+            "image": "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:1a66549cdd8c5c0bb134f80be3135f426f170e3f465d226082f5b7a150d1d7ef",
+            "ports": [
+              {
+                "name": "oauth",
+                "containerPort": 4180
+              }
+            ],
+            "args": [
+              "--provider=openshift",
+              "--http-address=:4180",
+              "--https-address=",
+              "--cookie-secret-file=/etc/oauth/cookie-secret",
+              "--pass-access-token=false",
+              "--skip-provider-button=true",
+              "--approval-prompt=auto",
+              "--openshift-service-account=prometheus",
+              "--openshift-sar={\"namespace\":\"canary-demo\",\"resource\":\"services\",\"resourceName\":\"prometheus\",\"verb\":\"get\"}",
+              "--upstream=http://127.0.0.1:9090/",
+              "--pass-basic-auth=false"
+            ],
+            "volumeMounts": [
+              {
+                "name": "oauth-cookie",
+                "mountPath": "/etc/oauth",
+                "readOnly": true
+              }
+            ],
+            "readinessProbe": {
+              "tcpSocket": {
+                "port": "oauth"
+              },
+              "initialDelaySeconds": 3,
+              "periodSeconds": 5
+            },
+            "resources": {
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              },
+              "limits": {
+                "cpu": "200m",
+                "memory": "128Mi"
+              }
+            },
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            }
+          }
+        ],
+        "volumes": [
+          {
+            "name": "oauth-cookie",
+            "secret": {
+              "secretName": "observability-oauth",
+              "items": [
+                {
+                  "key": "prometheus-cookie-secret",
+                  "path": "cookie-secret"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "prometheus"
+  },
+  "spec": {
+    "ports": [
+      {
+        "name": "oauth",
+        "port": 4180,
+        "targetPort": "oauth"
+      }
+    ]
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "jaeger"
+  },
+  "spec": {
+    "template": {
+      "spec": {
+        "serviceAccountName": "jaeger",
+        "automountServiceAccountToken": true,
+        "containers": [
+          {
+            "name": "oauth-proxy",
+            "image": "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:1a66549cdd8c5c0bb134f80be3135f426f170e3f465d226082f5b7a150d1d7ef",
+            "ports": [
+              {
+                "name": "oauth",
+                "containerPort": 4180
+              }
+            ],
+            "args": [
+              "--provider=openshift",
+              "--http-address=:4180",
+              "--https-address=",
+              "--cookie-secret-file=/etc/oauth/cookie-secret",
+              "--pass-access-token=false",
+              "--skip-provider-button=true",
+              "--approval-prompt=auto",
+              "--openshift-service-account=jaeger",
+              "--openshift-sar={\"namespace\":\"canary-demo\",\"resource\":\"services\",\"resourceName\":\"jaeger\",\"verb\":\"get\"}",
+              "--upstream=http://127.0.0.1:16686/",
+              "--pass-basic-auth=false"
+            ],
+            "volumeMounts": [
+              {
+                "name": "oauth-cookie",
+                "mountPath": "/etc/oauth",
+                "readOnly": true
+              }
+            ],
+            "readinessProbe": {
+              "tcpSocket": {
+                "port": "oauth"
+              },
+              "initialDelaySeconds": 3,
+              "periodSeconds": 5
+            },
+            "resources": {
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              },
+              "limits": {
+                "cpu": "200m",
+                "memory": "128Mi"
+              }
+            },
+            "securityContext": {
+              "allowPrivilegeEscalation": false,
+              "capabilities": {
+                "drop": [
+                  "ALL"
+                ]
+              }
+            }
+          }
+        ],
+        "volumes": [
+          {
+            "name": "oauth-cookie",
+            "secret": {
+              "secretName": "observability-oauth",
+              "items": [
+                {
+                  "key": "jaeger-cookie-secret",
+                  "path": "cookie-secret"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "jaeger"
+  },
+  "spec": {
+    "ports": [
+      {
+        "name": "oauth",
+        "port": 4180,
+        "targetPort": "oauth"
+      }
+    ]
+  }
+}

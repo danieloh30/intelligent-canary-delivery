@@ -34,7 +34,7 @@ elif 'apply' in args:
   with (root/'applied').open('a') as f:f.write(body+'\n')
   if 'kind: Subscription' in body:(root/'operator').touch()
  if '-k' in args:
-  base=Path(args[args.index('-k')+1]);(root/'sso-control').write_text((base/'sso-control.yaml').read_text());(root/'platform').write_text((base.parent/'base/platform.yaml').read_text())
+  base=Path(args[args.index('-k')+1]);(root/'sso-control').write_text((base/'sso-control.yaml').read_text());(root/'sso-observability').write_text((base/'sso-observability.yaml').read_text());(root/'platform').write_text((base.parent/'base/platform.yaml').read_text())
 elif 'imagestreamtag' in args:print('sha256:abc123')
 elif 'imagestream' in args and 'oauth-proxy' in args:print('quay.io/test/oauth-proxy@sha256:abcdef')
 elif 'deployments' in args:print('deployment/argo-rollouts')
@@ -72,6 +72,8 @@ class InstallerTest(unittest.TestCase):
         self.assertIn('canary-demo-presenters',combined)
         self.assertIn('DEMO_PROXY_AUTH_ENABLED',(root/'sso-control').read_text())
         self.assertIn('quay.io/test/oauth-proxy@sha256:abcdef',(root/'sso-control').read_text())
+        self.assertEqual(2,(root/'sso-observability').read_text().count('quay.io/test/oauth-proxy@sha256:abcdef'))
+        self.assertIn('observability-oauth',combined)
     def test_incompatible_existing_namespace_controller_stops_install(self):
         root,result=self.run_installer('namespace')
         self.assertNotEqual(0,result.returncode)

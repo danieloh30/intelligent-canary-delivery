@@ -13,7 +13,9 @@
         "services"
       ],
       "resourceNames": [
-        "canary-control"
+        "canary-control",
+        "prometheus",
+        "jaeger"
       ],
       "verbs": [
         "get"

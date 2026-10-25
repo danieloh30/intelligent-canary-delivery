@@ -30,6 +30,9 @@ class OpenDemoTest(unittest.TestCase):
             return SimpleNamespace(stdout='decision-room.example.test\n')
         if 'openshift-gitops-server' in command:
             return SimpleNamespace(stdout='argocd.example.test\n')
+        for name in ('prometheus', 'jaeger'):
+            if name in command:
+                return SimpleNamespace(stdout=f'{name}.example.test\n')
         self.fail(f'Unexpected oc command: {command!r}')
 
     def assert_private_output(self, output):
@@ -105,6 +108,56 @@ class OpenDemoTest(unittest.TestCase):
         self.assertEqual(1, command.call_count)
         self.assertNotIn('secret', command.call_args.args[0])
         browser.assert_called_once_with('https://argocd.example.test/applications', new=2)
+
+    def test_observability_targets_open_only_their_sso_route_without_secrets(self):
+        for name in ('prometheus', 'jaeger'):
+            output = io.StringIO()
+            with self.subTest(target=name), \
+                 patch.dict(os.environ, {'DEMO_NAMESPACE': 'telemetry-demo', 'DEMO_API_TOKEN': self.token}, clear=True), \
+                 patch.object(LAUNCHER.subprocess, 'run', side_effect=self.cluster_response) as command, \
+                 patch.object(LAUNCHER.webbrowser, 'open', return_value=True) as browser, \
+                 contextlib.redirect_stdout(output):
+                LAUNCHER.main([name])
+            self.assertEqual(1, command.call_count)
+            self.assertEqual(['oc', '-n', 'telemetry-demo', 'get', 'route', name,
+                              '-o', 'jsonpath={.spec.host}'], command.call_args.args[0])
+            browser.assert_called_once_with(f'https://{name}.example.test/', new=2)
+            self.assert_private_output(output.getvalue())
+
+    def test_present_observability_opens_four_distinct_sso_tabs_without_url_credentials(self):
+        output = io.StringIO()
+        with patch.dict(os.environ, {'DEMO_NAMESPACE': 'telemetry-demo', 'GITOPS_NAMESPACE': 'team-gitops',
+                                     'DEMO_API_TOKEN': self.token}, clear=True), \
+             patch.object(LAUNCHER.subprocess, 'run', side_effect=self.cluster_response) as command, \
+             patch.object(LAUNCHER.webbrowser, 'open', return_value=True) as browser, \
+             contextlib.redirect_stdout(output):
+            LAUNCHER.main(['present', '--observability'])
+        self.assertEqual([
+            'https://decision-room.example.test/', 'https://argocd.example.test/applications',
+            'https://prometheus.example.test/', 'https://jaeger.example.test/',
+        ], [call.args[0] for call in browser.call_args_list])
+        self.assertTrue(all(call.kwargs == {'new': 2} for call in browser.call_args_list))
+        self.assertEqual(4, command.call_count)
+        self.assertEqual(['telemetry-demo', 'team-gitops', 'telemetry-demo', 'telemetry-demo'],
+                         [call.args[0][2] for call in command.call_args_list])
+        self.assert_private_output(output.getvalue())
+
+    def test_local_and_observability_flags_reject_incompatible_targets_before_oc(self):
+        invalid = [
+            ['argo', '--local'], ['prometheus', '--local'], ['jaeger', '--local'], ['present', '--local'],
+            ['open', '--observability'], ['argo', '--observability'],
+            ['prometheus', '--observability'], ['jaeger', '--observability'],
+            ['open', '--local', '--observability'],
+        ]
+        for arguments in invalid:
+            with self.subTest(arguments=arguments), \
+                 patch.object(LAUNCHER.subprocess, 'run') as command, \
+                 patch.object(LAUNCHER.webbrowser, 'open') as browser, \
+                 contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as raised:
+                LAUNCHER.main(arguments)
+            self.assertEqual(2, raised.exception.code)
+            command.assert_not_called()
+            browser.assert_not_called()
 
     def test_oc_failure_does_not_disclose_captured_credentials(self):
         failure = subprocess.CalledProcessError(1, ['oc'], output=self.token, stderr=self.token)

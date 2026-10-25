@@ -104,6 +104,15 @@ if ! oc -n "$NS" get secret canary-oauth >/dev/null 2>&1; then
   python3 -c 'import base64,secrets; print(base64.b64encode(secrets.token_bytes(32)).decode(),end="")' > "$work/cookie-secret"
   oc -n "$NS" create secret generic canary-oauth --from-file="$work/cookie-secret" --dry-run=client -o yaml | oc apply -f -
 fi
+if ! oc -n "$NS" get secret observability-oauth >/dev/null 2>&1; then
+  python3 - "$work" <<'PYCOOKIE'
+import base64,secrets,sys
+from pathlib import Path
+for name in ('prometheus','jaeger'):
+    (Path(sys.argv[1])/(name+'-cookie-secret')).write_text(base64.b64encode(secrets.token_bytes(32)).decode())
+PYCOOKIE
+  oc -n "$NS" create secret generic observability-oauth --from-file="$work/prometheus-cookie-secret" --from-file="$work/jaeger-cookie-secret" --dry-run=client -o yaml | oc apply -f -
+fi
 presenter=${DEMO_PRESENTER_USER:-$(oc whoami)}
 if ! oc get group canary-demo-presenters >/dev/null 2>&1; then oc adm groups new canary-demo-presenters; fi
 oc adm groups add-users canary-demo-presenters "$presenter"
@@ -111,13 +120,15 @@ oauth_image=${OAUTH_PROXY_IMAGE:-$(oc -n openshift get imagestream oauth-proxy -
 [[ -n "$oauth_image" ]] || { echo 'Set OAUTH_PROXY_IMAGE to the cluster-compatible OpenShift OAuth proxy image.' >&2; exit 1; }
 mkdir "$work/base" "$work/openshift"
 cp deploy/openshift/*.yaml "$work/openshift/"
-OAUTH_IMAGE="$oauth_image" SSO_FILE="$work/openshift/sso-control.yaml" python3 - <<'PYSSO'
+OAUTH_IMAGE="$oauth_image" SSO_DIR="$work/openshift" python3 - <<'PYSSO'
 import json,os
 from pathlib import Path
-p=Path(os.environ['SSO_FILE']);d=json.loads(p.read_text())
-for container in d['spec']['template']['spec']['containers']:
-    if container['name']=='oauth-proxy':container['image']=os.environ['OAUTH_IMAGE']
-p.write_text(json.dumps(d,indent=2)+'\n')
+for p in Path(os.environ['SSO_DIR']).glob('sso-*.yaml'):
+    documents=[json.loads(part) for part in p.read_text().split('\n---\n')]
+    for d in documents:
+        for container in d.get('spec',{}).get('template',{}).get('spec',{}).get('containers',[]):
+            if container['name']=='oauth-proxy':container['image']=os.environ['OAUTH_IMAGE']
+    p.write_text('\n---\n'.join(json.dumps(d,indent=2) for d in documents)+'\n')
 PYSSO
 cp deploy/base/*.yaml "$work/base/"
 IMAGE_REF="$image" PLATFORM_FILE="$work/base/platform.yaml" python3 - <<'PYCODE'
@@ -184,7 +195,9 @@ oc -n "$NS" rollout status deployment/inventory --timeout=300s
 oc -n "$NS" rollout status deployment/jaeger --timeout=300s
 oc -n "$NS" rollout status deployment/prometheus --timeout=300s
 echo "Dashboard: https://$(oc -n "$NS" get route canary-control -o jsonpath='{.spec.host}')"
+echo "Prometheus: https://$(oc -n "$NS" get route prometheus -o jsonpath='{.spec.host}')"
+echo "Jaeger: https://$(oc -n "$NS" get route jaeger -o jsonpath='{.spec.host}')"
 echo 'Get the presenter token locally: oc -n canary-demo get secret canary-secrets -o jsonpath="{.data.api-token}" | base64 --decode'
 echo 'Verify Argo sync and traffic before rehearsal: ./demo.sh doctor'
-echo 'Open the authenticated dashboard and Argo CD tabs: ./demo.sh present'
+echo 'Open dashboard, Argo CD, Prometheus, and Jaeger: ./demo.sh present --observability'
 echo 'Operator and OpenShift 4.22 compatibility still requires a real-cluster rehearsal.'

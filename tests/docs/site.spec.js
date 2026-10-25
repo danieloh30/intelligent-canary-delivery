@@ -32,7 +32,7 @@ test('mobile home fits the viewport and chapter links work',async({page})=>{
 });
 
 test('tutorial routes and local assets resolve',async({request})=>{
- const paths=['/','/tutorials/01-local/','/tutorials/02-cluster/','/tutorials/03-investigate/','/tutorials/04-govern/','/architecture/','/reference/agents/','/reference/api/','/reference/troubleshooting/','/demo-design/'];
+ const paths=['/','/tutorials/01-local/','/tutorials/02-cluster/','/tutorials/03-investigate/','/tutorials/04-govern/','/architecture/','/reference/agents/','/reference/api/','/reference/observability/','/reference/troubleshooting/','/demo-design/'];
  for(const path of paths){const response=await request.get(path);expect(response.ok(),path).toBeTruthy();}
  for(const path of ['/assets/vendor/mermaid-12.1.0.min.js','/javascripts/diagrams.js','/javascripts/mermaid-solid-fills.js','/stylesheets/tutorial.css']){expect((await request.get(path)).ok(),path).toBeTruthy();}
 });

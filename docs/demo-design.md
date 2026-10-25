@@ -9,7 +9,7 @@ Keep asking the same question: **would you give this release more traffic?** The
 - Check the current operator's controller labels and log access.
 - Rehearse clearing the fault and draining the 60-second observation window.
 - Prepare the explicitly labeled local rehearsal as a fallback.
-- Open the dashboard and Argo CD with `./demo.sh present`. Complete OpenShift SSO before going on stage; select `canary-checkout` and leave its resource tree open in the second tab.
+- Open the dashboard and Argo CD with `./demo.sh present --observability`. Complete OpenShift SSO before going on stage; select `canary-checkout` and leave its resource tree open in the second tab.
 - Start the SPA timer when the demonstration begins, not during setup.
 
 ## The 10-minute core
@@ -28,7 +28,7 @@ Model calls, controller reconciliation, and observation windows consume real tim
 
 ### Two minutes: follow the investigation
 
-Expand the agent workflow diagram. Open one request observation, follow its trace ID in Jaeger, and match it to the retry log record. Show the relevant `@Agent` and `@ToolBox` definitions.
+Expand the agent workflow diagram. Use about 30 seconds for the [Prometheus comparisons](reference/observability.md), then 90 seconds to open one request observation, follow its trace ID in Jaeger, and match it to the retry log record. Show the relevant `@Agent` and `@ToolBox` definitions.
 
 ### Three minutes: govern autonomy
 

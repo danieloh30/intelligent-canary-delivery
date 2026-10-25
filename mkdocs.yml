@@ -43,6 +43,7 @@ nav:
       - Presenter playbook: demo-design.md
   - Operate and extend:
       - API and configuration: reference/api.md
+      - Metrics and traces: reference/observability.md
       - Troubleshooting: reference/troubleshooting.md
 
 plugins:

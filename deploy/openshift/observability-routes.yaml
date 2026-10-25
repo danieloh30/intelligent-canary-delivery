@@ -1,0 +1,52 @@
+{
+  "apiVersion": "route.openshift.io/v1",
+  "kind": "Route",
+  "metadata": {
+    "name": "prometheus"
+  },
+  "spec": {
+    "to": {
+      "kind": "Service",
+      "name": "prometheus"
+    },
+    "port": {
+      "targetPort": "oauth"
+    },
+    "tls": {
+      "termination": "edge",
+      "insecureEdgeTerminationPolicy": "Redirect"
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "ServiceAccount",
+  "metadata": {
+    "name": "jaeger",
+    "annotations": {
+      "serviceaccounts.openshift.io/oauth-redirectreference.jaeger": "{\"kind\": \"OAuthRedirectReference\", \"apiVersion\": \"v1\", \"reference\": {\"kind\": \"Route\", \"name\": \"jaeger\"}}"
+    }
+  }
+}
+---
+{
+  "apiVersion": "route.openshift.io/v1",
+  "kind": "Route",
+  "metadata": {
+    "name": "jaeger"
+  },
+  "spec": {
+    "to": {
+      "kind": "Service",
+      "name": "jaeger"
+    },
+    "port": {
+      "targetPort": "oauth"
+    },
+    "tls": {
+      "termination": "edge",
+      "insecureEdgeTerminationPolicy": "Redirect"
+    }
+  }
+}

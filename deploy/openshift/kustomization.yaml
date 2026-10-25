@@ -4,7 +4,9 @@ resources:
   - ../base
   - route.yaml
   - sso-rbac.yaml
+  - observability-routes.yaml
 patches:
   - path: sso-control.yaml
   - path: sso-service.yaml
   - path: sso-account.yaml
+  - path: sso-observability.yaml
