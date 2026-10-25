@@ -1,4 +1,4 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.resource;
 
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.service;
 
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;

@@ -1,6 +1,8 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.service;
 
-import dev.danieloh.canary.agents.*;
+import dev.danieloh.canary.model.Evaluation;
+import dev.danieloh.canary.agentic.InvestigationWorkflow;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.annotation.PreDestroy;
@@ -8,7 +10,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
-import static dev.danieloh.canary.Domain.*;
+import static dev.danieloh.canary.model.Domain.*;
 
 @ApplicationScoped
 public class InvestigationService {

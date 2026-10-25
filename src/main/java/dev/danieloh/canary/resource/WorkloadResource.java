@@ -1,4 +1,4 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.resource;
 
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;

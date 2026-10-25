@@ -1,11 +1,13 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.service;
+
+import dev.danieloh.canary.model.Evaluation;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import static dev.danieloh.canary.Domain.*;
+import static dev.danieloh.canary.model.Domain.*;
 
 @ApplicationScoped
 public class DemoStore {

@@ -1,4 +1,4 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.model;
 
 import java.time.Instant;
 import java.util.List;

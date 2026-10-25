@@ -1,4 +1,9 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.agentic;
+
+import dev.danieloh.canary.model.Domain;
+import dev.danieloh.canary.service.InvestigationService;
+import dev.danieloh.canary.support.MockOpenAi;
+import dev.danieloh.canary.service.RehearsalEvidence;
 
 import io.quarkus.test.junit.*;
 import io.quarkus.test.common.QuarkusTestResource;

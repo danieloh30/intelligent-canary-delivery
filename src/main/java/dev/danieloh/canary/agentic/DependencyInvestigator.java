@@ -1,9 +1,9 @@
-package dev.danieloh.canary.agents;
+package dev.danieloh.canary.agentic;
 
 import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.*;
 import io.quarkiverse.langchain4j.ToolBox;
-import dev.danieloh.canary.Domain.Finding;
+import dev.danieloh.canary.model.Domain.Finding;
 
 public interface DependencyInvestigator {
     @Agent(name="Dependency Investigator", outputKey="dependencyFinding", description="Investigate traces and retry logs")

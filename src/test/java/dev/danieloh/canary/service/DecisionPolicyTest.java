@@ -1,9 +1,9 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.service;
 
 import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.*;
-import static dev.danieloh.canary.Domain.*;
+import static dev.danieloh.canary.model.Domain.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DecisionPolicyTest {

@@ -1,7 +1,7 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.service;
 import java.time.Instant;
 import java.util.*;
-import static dev.danieloh.canary.Domain.*;
+import static dev.danieloh.canary.model.Domain.*;
 
 /** Explicit offline fixtures; never eligible for an Argo analysis result. */
 public final class RehearsalEvidence {

@@ -1,7 +1,8 @@
-package dev.danieloh.canary.agents;
+package dev.danieloh.canary.agentic;
 
-import dev.danieloh.canary.*;
-import dev.danieloh.canary.Domain.*;
+import dev.danieloh.canary.service.DemoStore;
+
+import dev.danieloh.canary.model.Domain.*;
 import dev.langchain4j.agentic.declarative.*;
 import dev.langchain4j.service.V;
 import dev.langchain4j.service.MemoryId;

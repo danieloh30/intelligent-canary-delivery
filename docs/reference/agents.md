@@ -54,12 +54,16 @@ All specialists read the same frozen evidence and reference the same evaluation 
 
 ## Read the implementation
 
-- [Agent interfaces and toolboxes](https://github.com/danieloh30/intelligent-canary-delivery/tree/main/src/main/java/dev/danieloh/canary/agents)
-- [InvestigationService](https://github.com/danieloh30/intelligent-canary-delivery/blob/main/src/main/java/dev/danieloh/canary/InvestigationService.java)
-- [DecisionPolicy](https://github.com/danieloh30/intelligent-canary-delivery/blob/main/src/main/java/dev/danieloh/canary/DecisionPolicy.java)
+- [Agent interfaces and toolboxes](https://github.com/danieloh30/intelligent-canary-delivery/tree/main/src/main/java/dev/danieloh/canary/agentic)
+- [InvestigationService](https://github.com/danieloh30/intelligent-canary-delivery/blob/main/src/main/java/dev/danieloh/canary/service/InvestigationService.java)
+- [DecisionPolicy](https://github.com/danieloh30/intelligent-canary-delivery/blob/main/src/main/java/dev/danieloh/canary/service/DecisionPolicy.java)
 
 ## Verify behavior
 
 The Java suite includes an OpenAI-protocol stub that exercises real agent wiring and tool-result turns. It also runs a second investigation to check memory and evidence isolation. That verifies the integration contract without making an external model call.
 
 Live GPT-4o mini behavior still requires an API key and a separate integration rehearsal. Record actual latency, tool count, evidence validity, and outcome quality rather than inventing a confidence score.
+
+## Source layout
+
+Production code is organized into `dev.danieloh.canary.agentic`, `.model`, `.resource`, and `.service`. The agentic package contains the declarative workflow and toolboxes; model holds shared records and evaluation state; resource exposes HTTP boundaries and API authentication; service owns orchestration, policy, evidence collection, cluster access, and workload traffic. Tests mirror these boundaries, with the OpenAI protocol stub in a test-only support package.

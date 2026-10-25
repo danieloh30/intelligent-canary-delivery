@@ -1,4 +1,4 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.support;
 
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import com.sun.net.httpserver.HttpServer;

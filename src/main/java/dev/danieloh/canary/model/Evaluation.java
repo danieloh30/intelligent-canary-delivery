@@ -1,10 +1,10 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.model;
 
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import static dev.danieloh.canary.Domain.*;
+import static dev.danieloh.canary.model.Domain.*;
 
 public class Evaluation {
     public final String id;

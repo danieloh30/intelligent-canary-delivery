@@ -1,4 +1,4 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;

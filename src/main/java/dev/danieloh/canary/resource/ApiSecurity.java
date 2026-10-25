@@ -1,4 +1,4 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.resource;
 
 import jakarta.ws.rs.container.*;
 import jakarta.ws.rs.core.Response;

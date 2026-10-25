@@ -1,10 +1,10 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Instant;
 import java.util.*;
-import static dev.danieloh.canary.Domain.*;
+import static dev.danieloh.canary.model.Domain.*;
 
 @ApplicationScoped
 public class EvidenceCollector {

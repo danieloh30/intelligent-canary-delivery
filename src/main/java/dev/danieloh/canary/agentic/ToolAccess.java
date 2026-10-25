@@ -1,6 +1,8 @@
-package dev.danieloh.canary.agents;
+package dev.danieloh.canary.agentic;
 
-import dev.danieloh.canary.*;
+import dev.danieloh.canary.service.DemoStore;
+import dev.danieloh.canary.model.Evaluation;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Instant;

@@ -1,9 +1,9 @@
-package dev.danieloh.canary.agents;
+package dev.danieloh.canary.agentic;
 
 import dev.langchain4j.agentic.Agent;
 import dev.langchain4j.service.*;
 import io.quarkiverse.langchain4j.ToolBox;
-import dev.danieloh.canary.Domain.*;
+import dev.danieloh.canary.model.Domain.*;
 
 public interface CanaryDecisionAgent {
     @Agent(name="Canary Decision Agent", outputKey="recommendation", description="Synthesize findings into a rollout recommendation")

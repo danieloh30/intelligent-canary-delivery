@@ -1,4 +1,4 @@
-package dev.danieloh.canary.agents;
+package dev.danieloh.canary.agentic;
 import dev.langchain4j.agent.tool.Tool;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;

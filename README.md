@@ -230,13 +230,24 @@ All Mermaid charts follow the [agentic Java workshop reference](https://danieloh
 
 ## Implementation map
 
-- `src/main/java/dev/danieloh/canary/agents/`: four agents and their scoped toolboxes.
-- `agents/InvestigationWorkflow`: declarative sequence with a parallel investigation stage.
-- `InvestigationService`: deadlines, execution state, and policy enforcement.
-- `EvidenceCollector`: cluster observations, shared time window, and revision matching.
-- `DecisionPolicy`: deterministic safety and approval checks.
-- `DemoResource`: presenter API and rollout analysis adapter.
-- `WorkloadResource`: checkout, inventory, real request observations, OTel spans, and controlled faults.
+```text
+src/main/java/dev/danieloh/canary/
+├── agentic/   # @Agent interfaces, workflows, and scoped tools
+├── model/     # Domain records, verdicts, and evaluation state
+├── resource/  # Presenter/workload REST endpoints and API authentication
+└── service/   # Investigation, policy, evidence, cluster access, and traffic
+```
+
+Tests mirror these packages; the OpenAI protocol stub lives under the test-only `support` package.
+
+
+- `src/main/java/dev/danieloh/canary/agentic/`: four agents and their scoped toolboxes.
+- `agentic/InvestigationWorkflow`: declarative sequence with a parallel investigation stage.
+- `service/InvestigationService`: deadlines, execution state, and policy enforcement.
+- `service/EvidenceCollector`: cluster observations, shared time window, and revision matching.
+- `service/DecisionPolicy`: deterministic safety and approval checks.
+- `resource/DemoResource`: presenter API and rollout analysis adapter.
+- `resource/WorkloadResource`: checkout, inventory, real request observations, OTel spans, and controlled faults.
 - `src/main/resources/META-INF/resources/`: SPA, styles, and browser logic.
 - `deploy/`: Kubernetes platform resources, OpenShift Route, and GitOps release configuration.
 - `docs/`: presenter and audience guidance.

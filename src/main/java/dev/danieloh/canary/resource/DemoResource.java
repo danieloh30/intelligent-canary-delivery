@@ -1,4 +1,11 @@
-package dev.danieloh.canary;
+package dev.danieloh.canary.resource;
+
+import dev.danieloh.canary.service.ClusterService;
+import dev.danieloh.canary.service.DemoStore;
+import dev.danieloh.canary.model.Evaluation;
+import dev.danieloh.canary.service.EvidenceCollector;
+import dev.danieloh.canary.service.InvestigationService;
+import dev.danieloh.canary.service.RehearsalEvidence;
 
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -6,7 +13,7 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import java.time.Instant;
 import java.util.*;
-import static dev.danieloh.canary.Domain.*;
+import static dev.danieloh.canary.model.Domain.*;
 
 @Path("/api") @Produces(MediaType.APPLICATION_JSON)
 public class DemoResource {

@@ -142,3 +142,7 @@ oc get crd rollouts.argoproj.io applications.argoproj.io \
 ```
 
 Use the version served by the installed CRD; changing this demo to a nonexistent `v1` API would break resource reads.
+
+## Old Java types remain after updating the package layout
+
+The source now uses `agentic`, `model`, `resource`, and `service` packages. An existing checkout can still contain old compiled classes under `target/classes/dev/danieloh/canary` after a package move. LangChain4j may then report two different Finding types for the same workflow key. Stop Quarkus dev mode before cleaning stale build output, then start it again. A fresh checkout or clean CI build does not contain these obsolete classes. Never clean build outputs while dev mode is running.
