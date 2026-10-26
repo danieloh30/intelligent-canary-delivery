@@ -50,7 +50,7 @@ jobs:
       - run: pip install -r requirements-docs.txt
       - run: python3 scripts/check-diagrams.py
       - run: mkdocs build --strict
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
