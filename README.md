@@ -10,6 +10,8 @@ A Kubernetes tech demo with four Java agents built using Quarkus and LangChain4j
 
 The cluster installation targets a fresh **OpenShift 4.22** cluster. The application architecture uses Kubernetes APIs; OpenShift supplies operator lifecycle, image builds, an internal registry, and the external Route. The installer must be rehearsed on a real cluster before presenting; local tests do not establish operator compatibility.
 
+**Decision Policy** is implemented as deterministic Java/Quarkus rules (`service/DecisionPolicy.java`). It enforces minimum samples and evidence freshness, rejects missing evidence or unresolved limitations, applies error/latency safety limits, and requires human approval for eligible Production promotions. The four LLM agents recommend; these fixed rules determine the effective decision consumed by Argo. Existing **Production / approval → Approve promotion** provides the demo’s HITL step; present it in Extended mode. Approval rechecks the rules and cannot override missing/stale evidence or hard safety limits.
+
 ## The story
 
 A checkout service calls inventory. Three prepared release behaviors make the demonstration reproducible:
@@ -33,7 +35,7 @@ flowchart TD
     O["Metrics, logs, and trace-linked observations"]
     A(["InvestigationWorkflow.investigate()"])
     D{"Canary Decision Agent"}
-    P{"Java policy gate"}
+    P{"Decision Policy gate"}
     GO["GO: advance current stage"]
     HOLD["HOLD: gather evidence or await approval"]
     NO["NO-GO: abort candidate"]

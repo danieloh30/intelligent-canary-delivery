@@ -54,3 +54,20 @@ test('live progress and the investigate cue fit a mobile viewport',async({page})
  await expect(page.locator('#progress-investigate')).toBeEnabled();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
 });
+
+test('Decision Policy explanation exposes safety requirements and existing HITL approval',async({page})=>{
+ await setup(page);await page.goto('/');
+ const policy=page.locator('.policy-summary');await policy.locator('summary').click();
+ await expect(policy).toContainText('30 requests per revision');await expect(policy).toContainText('120-second expiry');
+ await expect(policy).toContainText('limitations remain unresolved');await expect(policy).toContainText('error and latency safety limits');
+ await expect(policy).toContainText('human approval (HITL)');await expect(policy).toContainText('cannot override');
+});
+
+test('presenter guide explains manual gates, the analysis budget, and Extended HITL',async({page})=>{
+ await setup(page);await page.goto('/');await page.getByRole('button',{name:'Presenter guide'}).click();
+ const guide=page.locator('#guide');
+ await expect(guide).toContainText('15s pause is warm-up');await expect(guide).toContainText('180 HTTP checks at 5s intervals');
+ await expect(guide).toContainText('30 live requests in BOTH');await expect(guide).toContainText('run a fresh investigation');
+ await expect(guide).toContainText('Production / approval');await expect(guide).toContainText('Approve promotion');
+ await expect(guide).toContainText('DecisionPolicy.java');await expect(guide).toContainText('presenter-triggered');
+});

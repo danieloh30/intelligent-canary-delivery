@@ -74,7 +74,7 @@ Local development defaults the presenter token to `demo-local`. Production manif
 The application distinguishes three things:
 
 1. **Recommendation:** the model's proposed verdict and explanation.
-2. **Effective decision:** the result after Java policy checks.
+2. **Effective decision:** the result after Decision Policy checks.
 3. **Rollout outcome:** the controller's actual status after consuming the analysis result.
 
 The decision API rechecks release and stage identity. A pending, expired, fixture, or mismatched result returns HOLD. Never infer that a rollout advanced merely because an agent said GO; inspect the controller state.

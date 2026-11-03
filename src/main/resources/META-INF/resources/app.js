@@ -134,7 +134,7 @@ function render(){
 }
 function renderEvidence(e){
  const host=$('#evidence-content');host.replaceChildren();
- const blocks=[['Observation window',JSON.stringify(e.evidence,null,2)],['Agent recommendation',JSON.stringify(e.recommendation||{status:e.status},null,2)],['Platform policy',JSON.stringify(e.decision||{status:'Pending'},null,2)]];
+ const blocks=[['Observation window',JSON.stringify(e.evidence,null,2)],['Agent recommendation',JSON.stringify(e.recommendation||{status:e.status},null,2)],['Decision Policy',JSON.stringify(e.decision||{status:'Pending'},null,2)]];
  for(const [name,f]of Object.entries(e.findings||{})){const section=document.createElement('section');section.className='finding';const h=document.createElement('h3');h.textContent=names[name];const p=document.createElement('p');p.textContent=f.summary;section.append(h,p);host.append(section);}
  for(const [title,body]of blocks){const section=document.createElement('section');section.className='evidence-block';const h=document.createElement('h3');h.textContent=title;const pre=document.createElement('pre');pre.textContent=body;section.append(h,pre);host.append(section);}
 }

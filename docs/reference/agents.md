@@ -44,7 +44,7 @@ Release notes suggest an explanation. They cannot establish causality on their o
 
 The decision agent consumes typed specialist findings and returns a `Recommendation` with a verdict, short summary, evidence references, and unresolved limitations.
 
-It has no deployment tools. Java policy can withhold or reject its proposed outcome.
+It has no deployment tools. Decision Policy can withhold or reject its proposed outcome.
 
 ## Isolate each investigation
 

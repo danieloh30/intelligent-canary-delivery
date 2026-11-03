@@ -105,7 +105,7 @@ The live sample counts appear **before** any investigation. They are read-only o
 
 If the gate finishes **Inconclusive**, the panel explains that a fresh release/reset is required and disables investigation for that completed run. It never bypasses a gate. Missing, stale, or unavailable progress also withholds the ready cue. Selecting a different candidate version disables the stage-specific action until it matches the active rollout.
 
-Each Argo analysis gate consumes the result of a **four-agent Java/LLM investigation**, followed by deterministic Java policy validation. The gate polls the effective decision API; it does not run a single standalone agent or start another investigation on each poll.
+Each Argo analysis gate consumes the result of a **four-agent Java/LLM investigation**, followed by deterministic **Decision Policy** validation. The gate polls the effective decision API; it does not run a single standalone agent or start another investigation on each poll.
 
 Investigations are manual here to give the presenter control over fault injection and explanation. Each gate needs fresh evidence because traffic and dependency load change. An automated implementation could start an investigation on gate entry while retaining the same policy checks; refreshing this SPA does not do that.
 
@@ -129,7 +129,7 @@ A release starts GitOps reconciliation. The four Java agents start when you sele
 - **Release overview:** follow the four agent cards and **Decision activity** for orchestrator events, evidence tool reads, and the policy verdict. The SPA polls activity every two seconds; short states can pass between updates.
 - **Live console → Agent activity:** follow the same bounded event history as text.
 - **Live console → Quarkus control plane:** inspect actual Java pod logs, refreshed every four seconds. Switch to **Argo Rollouts controller** or **Argo CD controller** to follow deployment actions.
-- **Evidence explorer:** after completion, inspect the three specialist findings, final recommendation, frozen evidence, and independent Java policy result.
+- **Evidence explorer:** after completion, inspect the three specialist findings, final recommendation, frozen evidence, and independent Decision Policy result.
 
 The agents execute in one Quarkus service: Metrics Analyst first, Dependency Investigator and Release Analyst concurrently, then Canary Decision Agent. Tool reads appear during execution; specialist findings are published when the workflow completes. These views expose recorded activity and structured outputs, not private model reasoning.
 
@@ -202,7 +202,7 @@ Open **Evidence explorer** and identify:
 3. Dependency attempts per checkout.
 4. Correlated trace IDs and retry records.
 5. The specialist findings and final recommendation.
-6. The independent Java policy decision.
+6. The independent Decision Policy decision.
 
 The trace tool exposes request summaries with real OTel trace IDs. Switch to the prepared Jaeger tab and use a recent trace ID to open the complete trace tree. Follow `inventory.reserve` spans and the `retry.attempt` attributes; see the [metrics and traces walkthrough](../reference/observability.md). The agent log tool reads bounded request records; the Live Console separately retrieves actual pod logs.
 

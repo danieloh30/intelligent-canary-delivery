@@ -15,7 +15,7 @@ flowchart TD
     O["Metrics, logs, and trace-linked observations"]
     A(["InvestigationWorkflow.investigate()"])
     D{"Canary Decision Agent"}
-    P{"Java policy gate"}
+    P{"Decision Policy gate"}
     GO["GO: advance current stage"]
     HOLD["HOLD: gather evidence or await approval"]
     NO["NO-GO: abort candidate"]
@@ -54,7 +54,7 @@ flowchart TD
     R(["ReleaseAnalyst.review()"])
     RT["@Tool: release changes and runbook"]
     C{"CanaryDecisionAgent.decide()"}
-    P{"Java policy accepts evidence?"}
+    P{"Decision Policy accepts evidence?"}
     YES["Return GO, HOLD, or NO-GO to Argo"]
     NO["HOLD: incomplete, stale, or unapproved"]
     A -->|"@SequenceAgent"| M
