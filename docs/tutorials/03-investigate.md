@@ -10,6 +10,32 @@ Before presenting, run `./demo.sh present --observability` once to prepare the d
 
 Confirm v1 is stable in **Release overview** and inspect **Live console → Checkout pods** for flowing requests. `./demo.sh status` remains an optional terminal check.
 
+!!! note "Checkout means an application operation"
+    In this demo, **checkout** means a simulated shopping/order checkout: the application calls inventory to reserve an item. **Checkout pods** are the Kubernetes instances processing those requests. This is unrelated to `git checkout` or the GitHub Actions `actions/checkout` step that retrieves source code.
+
+### Explain the flowing requests
+
+The traffic generator continuously sends requests to the checkout application. In **Live console → Checkout pods**, point out the fields in a request log:
+
+```text
+INFO [checkout] traceId=... release=v1 attempts=1 success=true latencyMs=1.4
+```
+
+This is an illustrative line; trace IDs, timestamps, and latency vary on your cluster.
+
+- **`release=v1`**: this request ran on the baseline application version.
+- **`attempts=1`**: checkout called inventory once. This request did not amplify dependency traffic through retries.
+- **`success=true`**: the checkout request completed successfully.
+- **`latencyMs=1.4`**: this individual request completed in 1.4 milliseconds. Healthy baseline requests may take only a few milliseconds, but the exact value depends on the environment.
+- **`traceId`**: use this identifier in Jaeger to follow the checkout request and its inventory calls; see the [trace walkthrough](../reference/observability.md).
+
+!!! tip "Suggested presenter narration"
+    “Our traffic generator is continuously sending checkout requests. Here, v1 completes successfully with one inventory call and low latency. This gives us a baseline to compare against when we introduce a slowdown or release v3 with hidden retries.”
+
+Use **Healthy** in Release overview to confirm rollout health. These log lines demonstrate request activity and individual outcomes; a few successful requests do not establish the health of the entire observation window. The displayed p95 comes from the collected window, not a single log line.
+
+### Restore a clean baseline
+
 For a clean start, choose **Reset demo to v1** in Presenter controls. It clears the fault and current investigation. If v1 is already Healthy and stable, no new release is created. Otherwise reset commits a fresh v1 release through Git and the overview shows **Awaiting baseline**.
 
 Recovery still uses the normal gates: keep candidate **v1** and Development policy, wait for at least 30 observations per revision at the 10% analysis stage, then select **Run investigation**. Repeat at the 50% analysis stage. A finished Inconclusive analysis needs a fresh reset/release before it can run again. Once the rollout is Healthy, select Reset again to clear recovery results without another rollout.
