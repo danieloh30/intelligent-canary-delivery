@@ -185,7 +185,7 @@ Without a traffic-management provider, Argo Rollouts uses replica proportions to
 
 Agents start when you select **Run investigation**, after the canary has sufficient observations; a release alone starts GitOps reconciliation. Follow the four cards and **Decision activity** in Release overview, **Live console → Agent activity** for tool reads, and **Evidence explorer** for completed specialist findings and the policy result. No shell is needed to observe the Java agents. Tool reads appear during execution; findings arrive when the workflow completes.
 
-The SPA Live Console offers bounded tails from checkout, inventory, Quarkus control, Argo Rollouts, and Argo CD. It polls every four seconds; it is not an unbounded streaming log collector. Controller labels can differ by operator version; `./demo.sh doctor` shows labels for diagnosis.
+The SPA Live Console offers bounded tails from checkout, inventory, Quarkus control, Argo Rollouts, and Argo CD. The Quarkus source explicitly selects the Java container in the pod shared with the OAuth proxy. It polls every four seconds; it is not an unbounded streaming log collector. Controller labels can differ by operator version; `./demo.sh doctor` shows labels for diagnosis.
 
 ```bash
 oc -n canary-demo port-forward svc/jaeger 16686:16686

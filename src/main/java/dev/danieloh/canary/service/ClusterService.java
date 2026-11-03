@@ -54,7 +54,9 @@ public class ClusterService {
         List<String> lines=new ArrayList<>();
         try {
             for(var pod:kube.pods().inNamespace(ns).withLabelSelector(selector).list().getItems().stream().limit(3).toList()) {
-                String text=kube.pods().inNamespace(ns).withName(pod.getMetadata().getName()).tailingLines(50).getLog();
+                var resource=kube.pods().inNamespace(ns).withName(pod.getMetadata().getName());
+                // The control pod also runs oauth-proxy; Kubernetes requires a container name.
+                String text=source.equals("quarkus")?resource.inContainer("canary-control").tailingLines(50).getLog():resource.tailingLines(50).getLog();
                 lines.add("--- "+pod.getMetadata().getName()+" ---");
                 lines.addAll(Arrays.asList(text.split("\n")));
             }
