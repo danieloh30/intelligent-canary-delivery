@@ -116,3 +116,26 @@ Continue to [investigate a release](03-investigate.md).
 Visit the dashboard Route directly or run `./demo.sh present` to open it alongside Argo CD. The installer configures an OpenShift OAuth proxy and presenter access for `DEMO_PRESENTER_USER` (the installing human user by default). Complete OpenShift login or first-use consent if prompted; an existing OpenShift session is reused. You do not enter or retrieve a presenter token for the OpenShift dashboard. The browser uses its SSO cookie, while the backend API credential remains inside the pod. Local development continues to use its separate development credential.
 
 The installer also creates SSO-protected Prometheus and Jaeger Routes. Run `./demo.sh present --observability` to prepare all four demo tabs, or use `./demo.sh prometheus` and `./demo.sh jaeger`. Check `oc -n canary-demo get routes` for the current cluster addresses. Continue with the [metrics and traces walkthrough](../reference/observability.md) for the actual demo queries and trace-ID workflow.
+
+
+## Enable releases from the dashboard
+
+The presenter can release, inject faults, and investigate from the SPA. Before presenting, create a fine-grained GitHub token limited to your demo repository with **Contents: Read and write**. The account must be allowed to commit to the release branch under its branch rules. Store the token server-side; never enter it in the SPA.
+
+```bash
+# Read the credential without echoing it or putting it in shell history.
+read -rs DEMO_GITHUB_TOKEN
+export DEMO_GITHUB_TOKEN
+./demo.sh update-control
+unset DEMO_GITHUB_TOKEN
+```
+
+`update-control` creates or updates Secret **canary-github**, builds the current local source, updates only the Quarkus control service, and waits for readiness. An existing Secret is reused when the environment variable is absent. The token is mounted as an environment variable only in the control container. It is excluded from Git, build archives, browser responses, and agent tools. Missing credentials keep the button disabled. Local fixture rehearsal never commits releases.
+
+The defaults are repository `danieloh30/intelligent-canary-delivery` and branch `main`. For a fork, set `DEMO_RELEASE_REPOSITORY=owner/repository` and `DEMO_RELEASE_BRANCH=main` before running the update; they must match the Argo CD Application source. The API base URL defaults to GitHub.com. The presenter action updates only `deploy/gitops/rollout.yaml`, uses the current file SHA to reject concurrent edits, and returns a commit link. Branch protection failures remain visible; the application does not bypass them.
+
+## Update an existing cluster
+
+For tutorial and dashboard changes, run `git pull --ff-only` followed by `./demo.sh update-control`. Refresh the SPA after the deployment becomes available. The build produces an immutable digest and updates only the control service, preserving its OAuth sidecar and the checkout, inventory, and traffic-generator images. GitHub Pages publishes documentation separately through the tutorial workflow on pushes to main.
+
+To rebuild all platform and workload images, rerun `./demo.sh install` with the model key as described above, then rehearse the rollout stages again. Do not rebuild during a presentation.

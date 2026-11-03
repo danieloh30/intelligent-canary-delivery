@@ -150,6 +150,20 @@
                     "key": "openai-api-key"
                   }
                 }
+              },
+              {
+                "name": "DEMO_RELEASE_ENABLED",
+                "value": "true"
+              },
+              {
+                "name": "DEMO_GITHUB_TOKEN",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "name": "canary-github",
+                    "key": "token",
+                    "optional": true
+                  }
+                }
               }
             ],
             "resources": {

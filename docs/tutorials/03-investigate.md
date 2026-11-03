@@ -6,11 +6,9 @@ Run two cases that challenge a basic HTTP threshold in opposite ways. The static
 
 ## 1. Establish a baseline
 
-Confirm v1 is stable and the traffic generator is running:
+Before presenting, run `./demo.sh present --observability` once to prepare the dashboard, Argo CD, Prometheus, and Jaeger tabs. Complete OpenShift login if prompted. The release, fault injection, and investigation flow then stays in the dashboard.
 
-```bash
-./demo.sh status
-```
+Confirm v1 is stable in **Release overview** and inspect **Live console → Checkout pods** for flowing requests. `./demo.sh status` remains an optional terminal check.
 
 The application has three prepared behaviors:
 
@@ -31,18 +29,19 @@ The inventory fault is deliberately controlled. It makes the pattern reproducibl
 
 ## 2. Release v2 through Git
 
-```bash
-./demo.sh release v2
-```
+In the dashboard, choose **Shared slowdown**, confirm **Candidate version → v2**, and select **Release selected version through Git**. Follow the returned commit link to inspect the release diff.
 
-This command requires a clean working tree. It changes the version and release annotation in the rollout manifest, commits the change, and pushes it. Argo CD reconciles the new desired state.
+The server commits the version, fresh release annotation, and analysis arguments in `deploy/gitops/rollout.yaml` to the configured GitHub branch. Argo CD reconciles that commit. Selecting a candidate or scenario alone does not deploy it.
+
+!!! note "Enable dashboard releases before presenting"
+    Configure the server GitHub credential using the [cluster setup instructions](02-cluster.md#enable-releases-from-the-dashboard). Without it, the release button stays disabled and explains the shell alternative: `./demo.sh release v2`. The shell command requires a clean working tree; the dashboard writes directly to GitHub. Run `git pull --ff-only` before later editing or releasing from your local checkout.
 
 Wait until the **10% analysis step** is running and both revisions have at least **30 request observations**. Run an investigation after the step begins so its evidence matches the current stage.
 
 !!! note "Traffic proportions are approximate"
     The demo uses replica proportions without a traffic-management provider. Ten replicas make 10% and 50% easy to explain, but the request share is not guaranteed to equal the replica share. The traffic generator closes each connection so new canary pods can receive requests.
 
-Before injecting faults, run `./demo.sh argo`, log in via OpenShift, and open **canary-checkout**. Point out its Git revision and resource tree, including the Rollout and AnalysisTemplate. Keep this tab open.
+In the prepared Argo CD tab, open **canary-checkout**. Point out its Git revision and resource tree, including the Rollout and AnalysisTemplate. Return to the dashboard to continue.
 
 ## 3. Inject the shared slowdown
 
@@ -50,11 +49,22 @@ In the UI:
 
 1. Choose **Shared slowdown** and candidate **v2**.
 2. Select **Inject 25s shared slowdown**.
-3. Run an investigation under Development policy.
+3. Select **Development / automatic** policy and **Run investigation**.
+
+### Watch the Quarkus Java agents in the SPA
+
+A release starts GitOps reconciliation. The four Java agents start when you select **Run investigation**; the AnalysisTemplate polls the resulting decision. No agent terminal is required.
+
+- **Release overview:** follow the four agent cards and **Decision activity** for orchestrator events, evidence tool reads, and the policy verdict. The SPA polls activity every two seconds; short states can pass between updates.
+- **Live console → Agent activity:** follow the same bounded event history as text.
+- **Live console → Quarkus control plane:** inspect actual Java pod logs, refreshed every four seconds. Switch to **Argo Rollouts controller** or **Argo CD controller** to follow deployment actions.
+- **Evidence explorer:** after completion, inspect the three specialist findings, final recommendation, frozen evidence, and independent Java policy result.
+
+The agents execute in one Quarkus service: Metrics Analyst first, Dependency Investigator and Release Analyst concurrently, then Canary Decision Agent. Tool reads appear during execution; specialist findings are published when the workflow completes. These views expose recorded activity and structured outputs, not private model reasoning.
 
 Both revisions should show increased inventory latency. The basic static check fails while the agents investigate whether the candidate caused the change.
 
-During the affected-window wait, open Prometheus with `./demo.sh prometheus` and compare success, mean latency, and dependency attempts across release/revision labels. Use the [copyable observability queries](../reference/observability.md); Prometheus mean latency and the SPA p95 are different statistics.
+During the affected-window wait, switch to the prepared Prometheus tab and compare success, mean latency, and dependency attempts across release/revision labels. Use the [copyable observability queries](../reference/observability.md); Prometheus mean latency and the SPA p95 are different statistics.
 
 The appropriate initial result is **HOLD**. A known dependency cause does not make ongoing customer degradation safe.
 
@@ -83,13 +93,9 @@ Clear the fault, let affected observations drain from the **60-second window**, 
 
 ## 4. Release the retry regression
 
-After the healthy release settles:
+After the healthy release settles, choose **Hidden retries**, confirm candidate **v3**, and select **Release selected version through Git**.
 
-```bash
-./demo.sh release v3
-```
-
-Wait for the new canary and minimum observations. Select **Hidden retries**, confirm candidate **v3**, and run an investigation.
+Wait for the new canary, its current analysis stage, and at least 30 observations per revision. Select **Run investigation** and follow the Java agents in the same SPA views. The optional shell equivalent is `./demo.sh release v3`.
 
 The expected evidence pattern is:
 
@@ -127,7 +133,7 @@ Open **Evidence explorer** and identify:
 5. The specialist findings and final recommendation.
 6. The independent Java policy decision.
 
-The trace tool exposes request summaries with real OTel trace IDs. Run `./demo.sh jaeger` and use a recent trace ID to open the complete trace tree. Follow `inventory.reserve` spans and the `retry.attempt` attributes; see the [metrics and traces walkthrough](../reference/observability.md). The agent log tool reads bounded request records; the Live Console separately retrieves actual pod logs.
+The trace tool exposes request summaries with real OTel trace IDs. Switch to the prepared Jaeger tab and use a recent trace ID to open the complete trace tree. Follow `inventory.reserve` spans and the `retry.attempt` attributes; see the [metrics and traces walkthrough](../reference/observability.md). The agent log tool reads bounded request records; the Live Console separately retrieves actual pod logs.
 
 <figure markdown>
 

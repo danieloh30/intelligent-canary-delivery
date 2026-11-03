@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s);
 const names={metrics:'Metrics Analyst',dependency:'Dependency Investigator',release:'Release Analyst',decision:'Canary Decision Agent'};
 const stories={healthy:['What does a healthy release look like?','Establish the stable baseline before introducing a controlled fault.'],slowdown:['Is the release responsible for this slowdown?','Compare stable and canary. A shared dependency problem calls for context, recovery, and a fresh observation window.'],retry:['Can successful requests still hurt the system?','Follow the extra inventory calls. The canary may look healthy while consuming more dependency capacity.'],missing:['When should the platform refuse to decide?','Missing evidence is uncertainty. The policy gate withholds permission to promote.']};
-let scene='healthy',state={},tab='overview',busy=false,paused=false,lastCluster=0,elapsed=0,ticking=false;
+let scene='healthy',state={},tab='overview',busy=false,paused=false,lastCluster=0,elapsed=0,ticking=false,releasing=false;
 function consumeAccess(){const handoff=new URLSearchParams(location.hash.slice(1));if(!handoff.has('access'))return '';const value=handoff.get('access');handoff.delete('access');history.replaceState(null,'',location.pathname+location.search+(handoff.size?'#'+handoff.toString():''));return value||'';}
 const access=consumeAccess();
 const localHost=['localhost','127.0.0.1','[::1]'].includes(location.hostname);
@@ -39,7 +39,9 @@ function render(){
  $('#approve').hidden=!d?.approvalRequired;
  renderEvidence(e);
  }
- $('#evaluate').disabled=busy||e.status==='RUNNING';
+ $('#evaluate').disabled=busy||releasing||e.status==='RUNNING';
+ $('#release').disabled=!state.releaseEnabled||busy||releasing||e.status==='RUNNING';
+ text($('#release-help'),state.releaseEnabled?'Commits the rollout manifest to Git. Argo CD deploys the change.':'Dashboard releases are disabled. Configure server GitHub access or use ./demo.sh release v2 (or v3).');
  const activity=$('#activity');activity.replaceChildren();(state.events||[]).slice(-15).reverse().forEach(event=>{
  const row=document.createElement('div');row.className='event';const time=document.createElement('time');time.textContent=new Date(event.at).toLocaleTimeString([], {hour12:false});const actor=document.createElement('b');actor.textContent=event.actor;const message=document.createElement('span');message.textContent=event.message;row.append(time,actor,message);activity.append(row);
  });
@@ -52,11 +54,17 @@ function renderEvidence(e){
  for(const [title,body]of blocks){const section=document.createElement('section');section.className='evidence-block';const h=document.createElement('h3');h.textContent=title;const pre=document.createElement('pre');pre.textContent=body;section.append(h,pre);host.append(section);}
 }
 async function poll(){try{state=await api('/state');render();if(state.clusterEnabled&&Date.now()-lastCluster>8000){lastCluster=Date.now();const c=await api('/cluster');if(!c.connected){text($('#connection'),'Cluster unavailable');notice(c.message);}else{const r=c.rollout?.status||{};text($('#rollout-phase'),r.phase||'Reconciling');const weight=r.canary?.weights?.canary?.weight;$('#traffic-weight').style.width=(weight??0)+'%';text($('#traffic-caption'),weight===undefined?'Traffic managed by Argo Rollouts':`${weight}% canary / ${100-weight}% stable`);}}}catch(e){notice(e.message);}}
-async function action(fn){busy=true;$('#evaluate').disabled=true;try{await fn();await poll();}catch(e){notice(e.message);}finally{busy=false;$('#evaluate').disabled=state.latest?.status==='RUNNING';}}
+async function action(fn){busy=true;$('#evaluate').disabled=true;try{await fn();await poll();}catch(e){notice(e.message);}finally{busy=false;render();}}
 function selectScene(value){scene=value;document.querySelectorAll('[data-scene]').forEach(b=>b.classList.toggle('selected',b.dataset.scene===scene));text($('#scene-question'),stories[scene][0]);text($('#scene-description'),stories[scene][1]);$('#revision').value=scene==='retry'?'v3':'v2';}
 document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;document.querySelectorAll('.tab').forEach(p=>p.classList.toggle('active',p.id===tab));document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b===button));if(tab==='logs')logs();if(tab==='architecture'){if(!window.canaryDiagramsLoaded){window.canaryDiagramsLoaded=true;const script=document.createElement('script');script.src='/diagrams.js';document.body.append(script);}else document.dispatchEvent(new Event('canary-diagrams-visible'));}}));
 document.querySelectorAll('[data-scene]').forEach(b=>b.addEventListener('click',()=>selectScene(b.dataset.scene)));
 $('#evaluate').addEventListener('click',()=>action(()=>api(`/evaluate?scene=${scene}&profile=${$('#profile').value}&revision=${$('#revision').value}`,'POST')));
+$('#release').addEventListener('click',async()=>{
+ if(releasing)return;
+ releasing=true;render();$('#release-result').hidden=false;text($('#release-result'),'Committing release to Git…');
+ try{const result=await api('/release/'+$('#revision').value,'POST');const link=document.createElement('a');link.href=result.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=result.sha.slice(0,8);$('#release-result').replaceChildren(document.createTextNode(result.version+' committed: '),link,document.createTextNode('. Waiting for Argo CD. Run an investigation after the canary is sampled.'));await poll();}
+ catch(e){text($('#release-result'),e.message);}finally{releasing=false;render();}
+});
 $('#approve').addEventListener('click',()=>action(()=>api('/evaluations/'+state.latest.id+'/approve','POST')));
 $('#inject').addEventListener('click',()=>action(()=>api('/fault/25','POST')));$('#clear').addEventListener('click',()=>action(()=>api('/fault/0','POST')));
 $('#connect').addEventListener('click',()=>$('#access-dialog').showModal());$('#save-token').addEventListener('click',()=>{const input=$('#token');if(!input.value)return;token=input.value;sessionStorage.setItem('canary-token',token);setTimeout(poll,0);});

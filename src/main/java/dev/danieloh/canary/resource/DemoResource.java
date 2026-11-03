@@ -21,17 +21,19 @@ public class DemoResource {
     @Inject InvestigationService investigations;
     @Inject EvidenceCollector collector;
     @Inject ClusterService cluster;
+    @Inject dev.danieloh.canary.service.GitReleaseService releases;
     @ConfigProperty(name="demo.ai-mode",defaultValue="live") String mode;
     @ConfigProperty(name="demo.role",defaultValue="control") String role;
     private void control(){if(!role.equals("control"))throw new NotFoundException();}
     @GET @Path("/state")
     public Map<String,Object> state() {
         control();
-        return Map.of("mode",mode,"model","gpt-4o-mini","clusterEnabled",cluster.isEnabled(),
+        return Map.of("mode",mode,"model","gpt-4o-mini","clusterEnabled",cluster.isEnabled(),"releaseEnabled",releases.enabled(),
             "latest",store.latest()==null?Map.of():store.latest(),"events",store.events(),
             "keyConfigured",System.getenv("OPENAI_API_KEY")!=null);
     }
     @GET @Path("/cluster") public Map<String,Object> cluster(){control();return cluster.status();}
+    @POST @Path("/release/{version}") public Map<String,String> release(@PathParam("version") String version){control();return releases.release(version);}
     @GET @Path("/logs/{source}") public List<String> logs(@PathParam("source") String source){control();return cluster.logs(source);}
     @POST @Path("/evaluate")
     public Evaluation evaluate(@QueryParam("scene") @DefaultValue("healthy") String scene,

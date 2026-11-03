@@ -79,10 +79,15 @@
             <artifactId>quarkus-opentelemetry</artifactId>
         </dependency>
         <dependency>
-        <groupId>io.quarkus</groupId>
-        <artifactId>quarkus-junit</artifactId>
-        <scope>test</scope>
+        <groupId>io.quarkiverse.githubapi</groupId>
+        <artifactId>quarkus-github-api</artifactId>
+            <version>1.330.0</version>
     </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-junit</artifactId>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>

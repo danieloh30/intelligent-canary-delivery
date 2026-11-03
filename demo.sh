@@ -4,6 +4,7 @@ cd "$(dirname "$0")"
 NS=${DEMO_NAMESPACE:-canary-demo}
 case ${1:-help} in
   install) exec ./scripts/install-openshift.sh ;;
+  update-control) exec bash ./scripts/update-control.sh ;;
   doctor) exec ./scripts/doctor.sh ;;
   open|argo|prometheus|jaeger|present) exec python3 scripts/open-demo.py "$@" ;;
   dev)
@@ -39,5 +40,5 @@ PY
     exec "$0" release "$version" ;;
   status) oc -n "$NS" get rollout,analysisrun,pods ;;
   logs) oc -n "$NS" logs -l "app=${2:-canary-control}" --tail=80 --follow ;;
-  *) echo 'Usage: ./demo.sh install|doctor|open [--local]|argo|prometheus|jaeger|present [--observability]|dev|rehearsal|release v1|v2|v3|retry-analysis|status|logs [app]' ;;
+  *) echo 'Usage: ./demo.sh install|update-control|doctor|open [--local]|argo|prometheus|jaeger|present [--observability]|dev|rehearsal|release v1|v2|v3|retry-analysis|status|logs [app]' ;;
 esac

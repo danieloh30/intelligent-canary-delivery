@@ -131,9 +131,24 @@ Retrieve the token locally and enter it in the SPA:
 oc -n canary-demo get secret canary-secrets -o jsonpath='{.data.api-token}' | base64 --decode
 ```
 
-Do not paste cluster administrator credentials or API keys into the UI. The workload service account has no mounted Kubernetes token. The control service can read pods, logs, rollout state, and a single Argo CD Application; it cannot promote, patch, or delete deployments. The authenticated presenter API controls only the deliberately exposed inventory fault endpoint and decision approvals.
+Do not paste cluster administrator credentials or API keys into the UI. The workload service account has no mounted Kubernetes token. The control service can read pods, logs, rollout state, and a single Argo CD Application; it cannot promote, patch, or delete deployments. The authenticated presenter API controls the deliberately exposed inventory fault endpoint, investigations, decision approvals, and optional GitHub release commits. Repository credentials stay only in the control pod; the agents have no release-writing tool.
 
 The external page shell is public, but all `/api/*` and `/internal/*` data requires the presenter token. The browser stores it only in session storage and sends it in an Authorization header. Treat this as a dedicated demo environment, not a production identity system.
+
+## Release from the dashboard and update the control service
+
+Enable **Release selected version through Git** using the [dashboard release setup](docs/tutorials/02-cluster.md#enable-releases-from-the-dashboard). The server needs a GitHub token stored in Secret `canary-github` (`token` key), with repository contents write access to the configured repository and permission to commit to the release branch. The button stays disabled without credentials or in fixture mode. Use a repository-scoped, fine-grained token for a dedicated demo. Configure `DEMO_RELEASE_REPOSITORY` and `DEMO_RELEASE_BRANCH` to match the Argo CD Application if using a fork (defaults: `danieloh30/intelligent-canary-delivery`, `main`).
+
+The [Quarkus GitHub API extension](https://docs.quarkiverse.io/quarkus-github-api/dev/index.html) implements the GitHub client. Authenticated `POST /api/release/{version}` accepts only v1/v2/v3 and commits only `deploy/gitops/rollout.yaml`, using the file SHA to reject concurrent edits. `GET /api/state` reports `releaseEnabled`. The result includes a commit link; Argo CD still owns deployment. Selecting a candidate alone does not deploy it. Existing `./demo.sh release v2` and `v3` commands remain alternatives. After dashboard commits, run `git pull --ff-only` before using the local release script.
+
+For an existing cluster, pull the source and run:
+
+```bash
+git pull --ff-only
+./demo.sh update-control
+```
+
+This builds the local source and updates only the Quarkus control deployment with an immutable image digest, preserving its OAuth proxy, model secret, and checkout rollout. It does not reinstall operators or change the verified workload image. If the GitHub Secret is absent, releases remain disabled. To create or rotate that Secret during the update, provide `DEMO_GITHUB_TOKEN` in your environment; it is passed through a private temporary file, never a command argument or build context. Refresh the dashboard after completion. Run `./demo.sh install` only when you intend a full platform/workload image update.
 
 ## Present the demo
 
@@ -142,8 +157,8 @@ Select **10 minutes / Core** or **15 minutes / Extended** in the SPA. The timer 
 ### Core: 10 minutes
 
 1. **Establish (1 minute).** Verify v1 is Healthy, traffic is flowing, and the model key works. Ask: “Should this release get more traffic?”
-2. **Noise (2.5 minutes).** Run `./demo.sh release v2`. Wait until the 10% analysis is running and the canary has at least 30 observations. Select Shared slowdown and inject 25 seconds of latency. Investigate: the basic latency check fails; agents should HOLD. Clear the fault, wait for the affected 60-second window to drain, then investigate again. GO allows the current analysis step to proceed. Evaluate again at 50%.
-3. **Gray failure (4 minutes).** Run `./demo.sh release v3`. Wait for canary samples, choose Hidden retries, and investigate. The basic HTTP check should pass, while correlated retry amplification supports NO-GO. Watch actual Rollouts status and pod logs for the abort and stable recovery.
+2. **Noise (2.5 minutes).** Select Shared slowdown, candidate v2, then **Release selected version through Git** in the SPA. Wait until the 10% analysis is running and the canary has at least 30 observations. Select Shared slowdown and inject 25 seconds of latency. Investigate: the basic latency check fails; agents should HOLD. Clear the fault, wait for the affected 60-second window to drain, then investigate again. GO allows the current analysis step to proceed. Evaluate again at 50%.
+3. **Gray failure (4 minutes).** Select Hidden retries, candidate v3, then **Release selected version through Git** in the SPA. Wait for canary samples, choose Hidden retries, and investigate. The basic HTTP check should pass, while correlated retry amplification supports NO-GO. Watch actual Rollouts status and pod logs for the abort and stable recovery.
 4. **Trust (1.5 minutes).** Inspect specialist findings, source labels, trace IDs, policy reasons, and the exported decision record.
 5. **Developer experience (1 minute).** Show the shared AnalysisTemplate reference and the Git release diff.
 
@@ -167,6 +182,8 @@ Without a traffic-management provider, Argo Rollouts uses replica proportions to
 - If live infrastructure or the model is unavailable, open the separately labeled local rehearsal. Never present fixture output as live AI or live Kubernetes evidence.
 
 ## Inspect observability
+
+Agents start when you select **Run investigation**, after the canary has sufficient observations; a release alone starts GitOps reconciliation. Follow the four cards and **Decision activity** in Release overview, **Live console → Agent activity** for tool reads, and **Evidence explorer** for completed specialist findings and the policy result. No shell is needed to observe the Java agents. Tool reads appear during execution; findings arrive when the workflow completes.
 
 The SPA Live Console offers bounded tails from checkout, inventory, Quarkus control, Argo Rollouts, and Argo CD. It polls every four seconds; it is not an unbounded streaming log collector. Controller labels can differ by operator version; `./demo.sh doctor` shows labels for diagnosis.
 

@@ -6,8 +6,9 @@ All presenter and internal evidence endpoints require `Authorization: Bearer TOK
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| GET | `/api/state` | Execution mode, latest evaluation, and recent activity |
+| GET | `/api/state` | Execution mode, release availability, latest evaluation, and recent activity |
 | GET | `/api/cluster` | Rollout and Argo CD Application status |
+| POST | `/api/release/{version}` | Commit v1/v2/v3 to GitHub; return version, SHA, and commit URL |
 | POST | `/api/evaluate` | Start an investigation |
 | GET | `/api/evaluations/{id}` | Inspect one investigation |
 | POST | `/api/evaluations/{id}/approve` | Approve an eligible pending production decision |
@@ -53,6 +54,10 @@ The SPA polls every four seconds, with up to three matching pods and bounded lin
 | `DEMO_NAMESPACE` | `canary-demo` | Workload namespace; installer currently supports this fixed name |
 | `DEMO_GITOPS_NAMESPACE` | `openshift-gitops` | Runtime Argo CD namespace |
 | `DEMO_ROLE` | `control` | Run the image as control, checkout, inventory, or traffic |
+| `DEMO_RELEASE_ENABLED` | `false` (cluster control manifest enables it) | Allow presenter Git release actions when a credential is configured and mode is live |
+| `DEMO_GITHUB_TOKEN` | Optional server-side Secret | Repository contents write credential; never sent to the SPA |
+| `DEMO_RELEASE_REPOSITORY` | `danieloh30/intelligent-canary-delivery` | GitHub repository; must match Argo CD source |
+| `DEMO_RELEASE_BRANCH` | `main` | Release branch; must match Argo CD target revision |
 | `DEMO_RELEASE` | `v1` | Select the workload behavior |
 | `OTEL_ENDPOINT` | `http://jaeger:4317` | OTLP gRPC collector endpoint |
 | `REPO_URL` | This GitHub repository | Installer's Argo CD source repository |
