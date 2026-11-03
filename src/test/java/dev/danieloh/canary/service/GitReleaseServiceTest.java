@@ -52,7 +52,11 @@ class GitReleaseServiceTest {
             service.token=Optional.empty();assertFalse(service.enabled());service.token=Optional.of("test-credential");
             service.role="inventory";assertFalse(service.enabled());service.role="control";
             if(status==200) {
+                var previous=new dev.danieloh.canary.model.Evaluation(RehearsalEvidence.forScene("healthy"),"development","fixture");
+                previous.status="COMPLETE";service.store.add(previous);
                 var result=service.release("v2");assertEquals("new-commit",result.get("sha"));
+                assertNull(service.store.latest());assertSame(previous,service.store.require(previous.id));
+                assertEquals("v2",service.store.releaseIntent().version());
                 assertEquals("https://github.com/demo/repository/commit/new-commit",result.get("url"));
                 assertEquals("old-file",put.get().path("sha").asText());assertEquals("main",put.get().path("branch").asText());
                 var manifest=json.readTree(Base64.getDecoder().decode(put.get().path("content").asText()));

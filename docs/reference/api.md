@@ -8,6 +8,7 @@ All presenter and internal evidence endpoints require `Authorization: Bearer TOK
 | --- | --- | --- |
 | GET | `/api/state` | Execution mode, release availability, latest evaluation, and recent activity |
 | GET | `/api/cluster` | Rollout and Argo CD Application status |
+| POST | `/api/reset` | Clear faults and current presentation; restore v1 through Git when needed, preserving gates |
 | POST | `/api/release/{version}` | Commit v1/v2/v3 to GitHub; return version, SHA, and commit URL |
 | POST | `/api/evaluate` | Start an investigation |
 | GET | `/api/evaluations/{id}` | Inspect one investigation |
@@ -15,6 +16,8 @@ All presenter and internal evidence endpoints require `Authorization: Bearer TOK
 | GET | `/api/logs/{source}` | Read a bounded Kubernetes log tail |
 | POST | `/api/fault/{seconds}` | Inject or clear the shared inventory slowdown |
 | GET | `/api/analysis?revision=v2` | Return the effective verdict for Argo analysis |
+
+Reset and release actions reject concurrent investigations. A reset on an already Healthy stable v1 does not create a new rollout. Offline reset does not touch Git or Kubernetes. `/api/state` includes `resetEnabled` and `releaseIntent`; `/api/cluster` includes actual `stableVersion` and `candidateVersion` labels. The empty initial decision is not a GO: `/api/analysis` remains HOLD until eligible fresh evidence exists.
 
 ## Start an investigation
 

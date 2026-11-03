@@ -15,6 +15,19 @@ public class DemoStore {
     private final Deque<Event> events = new ArrayDeque<>();
     private final AtomicLong sequence = new AtomicLong();
     private volatile String latestId;
+    public record ReleaseIntent(String version,String releasedAt,boolean reset) {}
+    private volatile ReleaseIntent releaseIntent;
+    public ReleaseIntent releaseIntent(){return releaseIntent;}
+    public synchronized void released(String version,String releasedAt,boolean reset) {
+        latestId=null;
+        releaseIntent=new ReleaseIntent(version,releasedAt,reset);
+    }
+    public synchronized void resetPresentation() {
+        if(hasRunningEvaluation())throw new jakarta.ws.rs.ClientErrorException("Wait for the current investigation before resetting",409);
+        latestId=null;releaseIntent=null;events.clear();
+        event("presenter","Demo presentation reset. Previous evaluation records remain available by ID.");
+    }
+    public synchronized void invalidateLatest(){latestId=null;}
     public Evaluation latest() {String id=latestId;return id==null?null:require(id);}
     public boolean hasRunningEvaluation() {return evaluations.values().stream().anyMatch(e->e.status.equals("RUNNING"));}
     public synchronized void event(String actor, String message) {

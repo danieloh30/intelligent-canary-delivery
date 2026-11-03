@@ -28,23 +28,30 @@ public class DemoResource {
     @GET @Path("/state")
     public Map<String,Object> state() {
         control();
+        var latest=store.latest();
+        var intent=store.releaseIntent();
         return Map.of("mode",mode,"model","gpt-4o-mini","clusterEnabled",cluster.isEnabled(),"releaseEnabled",releases.enabled(),
-            "latest",store.latest()==null?Map.of():store.latest(),"events",store.events(),
+            "latest",latest==null?Map.of():latest,"events",store.events(),
+            "releaseIntent",intent==null?Map.of():intent,
+            "resetEnabled",!cluster.isEnabled()||releases.enabled(),
             "keyConfigured",System.getenv("OPENAI_API_KEY")!=null);
     }
     @GET @Path("/cluster") public Map<String,Object> cluster(){control();return cluster.status();}
-    @POST @Path("/release/{version}") public Map<String,String> release(@PathParam("version") String version){control();return releases.release(version);}
+    @POST @Path("/release/{version}") public Map<String,String> release(@PathParam("version") String version){control();synchronized(investigations){return releases.release(version);}}
+    @POST @Path("/reset") public Map<String,String> reset(){control();synchronized(investigations){return releases.reset();}}
     @GET @Path("/logs/{source}") public List<String> logs(@PathParam("source") String source){control();return cluster.logs(source);}
     @POST @Path("/evaluate")
     public Evaluation evaluate(@QueryParam("scene") @DefaultValue("healthy") String scene,
                                @QueryParam("profile") @DefaultValue("development") String profile,
                                @QueryParam("revision") @DefaultValue("v2") String revision) {
+        synchronized(investigations) {
         control();
         if(!Set.of("healthy","slowdown","retry","missing").contains(scene)||!Set.of("v1","v2","v3").contains(revision))throw new BadRequestException();
         if(store.hasRunningEvaluation())throw new ClientErrorException("An investigation is already running",409);
         Evidence evidence=cluster.isEnabled()?collector.collect(revision):RehearsalEvidence.forScene(scene);
         if(cluster.isEnabled() && scene.equals("missing")) evidence=new Evidence(evidence.id(),evidence.capturedAt(),evidence.source(),evidence.revision(),evidence.stableRevision(),evidence.rolloutStep(),evidence.stable(),evidence.canary(),List.of(),evidence.logs(),List.of("Presenter-injected trace evidence outage"),evidence.releaseNotes());
         return investigations.start(evidence,profile);
+        }
     }
     @GET @Path("/evaluations/{id}") public Evaluation evaluation(@PathParam("id") String id){control();return store.require(id);}
     @POST @Path("/evaluations/{id}/approve") public Evaluation approve(@PathParam("id") String id){control();var e=store.require(id);investigations.approve(e);return e;}

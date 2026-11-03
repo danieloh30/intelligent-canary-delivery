@@ -22,7 +22,7 @@ test('production approval changes HOLD to GO',async({page})=>{
 });
 test('extended mode exposes missing evidence and mobile fits',async({page})=>{
  await page.setViewportSize({width:390,height:844});await page.goto('/');
- await page.locator('#duration').selectOption('15');
+ await page.locator('#demo-mode').selectOption('extended');
  await page.locator('[data-scene="missing"]').click();
  await page.getByRole('button',{name:'Run investigation'}).click();
  await expect(page.locator('#effective-verdict')).toHaveText('HOLD');

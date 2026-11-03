@@ -10,7 +10,7 @@ Keep asking the same question: **would you give this release more traffic?** The
 - Rehearse clearing the fault and draining the 60-second observation window.
 - Prepare the explicitly labeled local rehearsal as a fallback.
 - Open the dashboard and Argo CD with `./demo.sh present --observability`. Complete OpenShift SSO before going on stage; select `canary-checkout` and leave its resource tree open in the second tab.
-- Start the SPA timer when the demonstration begins, not during setup.
+- Select Core or Extended in the SPA. Present the flow at your own pace; there is no presentation timer.
 
 ## The 10-minute core
 

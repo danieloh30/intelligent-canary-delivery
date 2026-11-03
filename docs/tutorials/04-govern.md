@@ -21,7 +21,7 @@ The presenter token authorizes this demonstration action. Production identity, r
 
 ## 2. Withhold required evidence
 
-Switch the demo-length selector to **15 minutes / Extended** and choose **Missing evidence**.
+Switch **Demo mode** to **Extended** and choose **Missing evidence**.
 
 In cluster mode, this scene deliberately withholds trace observations and records a presenter-injected trace evidence outage. Metrics remain observations from real requests. The policy requires HOLD because the mandatory evidence is incomplete.
 

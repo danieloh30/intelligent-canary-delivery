@@ -19,6 +19,7 @@ public class GitReleaseService {
     static final String PATH = "deploy/gitops/rollout.yaml";
     @Inject ObjectMapper json;
     @Inject DemoStore store;
+    @Inject ClusterService cluster;
     @ConfigProperty(name="demo.release-enabled",defaultValue="false") boolean releaseEnabled;
     @ConfigProperty(name="demo.github-token") Optional<String> token;
     @ConfigProperty(name="demo.release-repository",defaultValue="danieloh30/intelligent-canary-delivery") String repository;
@@ -31,6 +32,29 @@ public class GitReleaseService {
         return releaseEnabled && role.equals("control") && mode.equals("live") && token.filter(t->!t.isBlank()).isPresent();
     }
 
+    public synchronized Map<String,String> reset() {
+        if(store.hasRunningEvaluation())throw new ClientErrorException("Wait for the current investigation before resetting",409);
+        if(!cluster.isEnabled()) {
+            store.resetPresentation();
+            return Map.of("version","v1","message","Rehearsal reset. No cluster actions were taken.");
+        }
+        if(!mode.equals("live"))throw new ClientErrorException("Fixture mode cannot reset a live cluster",409);
+        boolean baseline=cluster.baselineHealthy();
+        if(!baseline && !enabled())throw new ClientErrorException("Configure GitHub releases before restoring the cluster baseline",409);
+        cluster.fault(0);
+        // Clearing the fault changes the conditions even if a subsequent Git request fails.
+        store.invalidateLatest();
+        if(baseline) {
+            store.resetPresentation();
+            return Map.of("version","v1","message","Fault cleared. Healthy v1 baseline retained; dashboard reset.");
+        }
+        var result=release("v1");
+        store.resetPresentation();
+        store.released("v1",result.get("releasedAt"),true);
+        store.event("presenter","Reset requested v1 through Git. Run fresh Development investigations at the 10% and 50% analysis stages; rollout gates remain active.");
+        return result;
+    }
+
     public synchronized Map<String,String> release(String version) {
         if(!Set.of("v1","v2","v3").contains(version)) throw new BadRequestException("Expected v1, v2, or v3");
         if(!enabled()) throw new ClientErrorException("Dashboard releases are disabled. Configure the server GitHub credential or use ./demo.sh release.",409);
@@ -41,14 +65,16 @@ public class GitReleaseService {
             var file=repo.getFileContent(PATH,branch);
             ObjectNode manifest;
             try(var input=file.read()) { manifest=(ObjectNode)json.readTree(input); }
-            updateManifest(manifest,version,Instant.now());
+            Instant releasedAt=Instant.now();
+            updateManifest(manifest,version,releasedAt);
             var result=repo.createContent().path(PATH).branch(branch).sha(file.getSha())
                 .content((json.writerWithDefaultPrettyPrinter().writeValueAsString(manifest)+"\n").getBytes(StandardCharsets.UTF_8))
                 .message("Release checkout "+version).commit();
             String sha=result.getCommit().getSHA1();
             String url="https://github.com/"+repository+"/commit/"+sha;
+            store.released(version,releasedAt.toString(),false);
             store.event("presenter","Released "+version+" through Git: "+sha+". Waiting for Argo CD reconciliation; run an investigation after canary observations arrive.");
-            return Map.of("version",version,"sha",sha,"url",url);
+            return Map.of("version",version,"sha",sha,"url",url,"releasedAt",releasedAt.toString());
         } catch(HttpException ex) {
             if(ex.getResponseCode()==409 || ex.getResponseCode()==422)
                 throw new ClientErrorException("Git changed or branch rules rejected the commit. Refresh and check the repository before retrying.",409);

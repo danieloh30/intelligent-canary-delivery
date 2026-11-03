@@ -29,14 +29,35 @@ public class ClusterService {
     public GenericKubernetesResource rollout() {
         return kube.genericKubernetesResources(context("rollouts","Rollout")).inNamespace(namespace).withName("checkout").get();
     }
+    public boolean baselineHealthy() {
+        var r=rollout();
+        if(r==null)return false;
+        var tree=json.valueToTree(r.getAdditionalProperties());
+        String hash=tree.at("/status/currentPodHash").asText();
+        return !hash.isBlank() && hash.equals(tree.at("/status/stableRS").asText())
+            && tree.at("/status/phase").asText().equals("Healthy")
+            && version(tree).equals("v1");
+    }
+    private static String version(JsonNode tree) {
+        for(var env:tree.at("/spec/template/spec/containers/0/env"))
+            if(env.path("name").asText().equals("DEMO_RELEASE"))return env.path("value").asText();
+        return "";
+    }
     public Map<String,Object> status() {
         if(!enabled)return Map.of("connected",false,"message","Offline rehearsal; no cluster actions");
         try {
             var r=rollout();
             var app=kube.genericKubernetesResources(context("applications","Application"))
                 .inNamespace(gitopsNamespace).withName("canary-checkout").get();
+            var tree=json.valueToTree(r==null?Map.of():r.getAdditionalProperties());
+            String stableHash=tree.at("/status/stableRS").asText(),stableVersion="";
+            for(var pod:kube.pods().inNamespace(namespace).withLabel("app","checkout").list().getItems()) {
+                if(stableHash.equals(pod.getMetadata().getLabels().get("rollouts-pod-template-hash")))
+                    for(var env:pod.getSpec().getContainers().getFirst().getEnv())
+                        if(env.getName().equals("DEMO_RELEASE"))stableVersion=env.getValue();
+            }
             return Map.of("connected",true,"namespace",namespace,"rollout",r==null?Map.of():r.getAdditionalProperties(),
-                "application",app==null?Map.of():app.getAdditionalProperties());
+                "application",app==null?Map.of():app.getAdditionalProperties(),"stableVersion",stableVersion,"candidateVersion",version(tree));
         } catch(Exception ex) {return Map.of("connected",false,"message","Cluster read unavailable: "+ex.getClass().getSimpleName());}
     }
     public List<String> logs(String source) {

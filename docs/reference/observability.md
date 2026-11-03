@@ -10,7 +10,7 @@ Use Prometheus and Jaeger as independent evidence views during the demo. OpenShi
 ./demo.sh present --observability
 ```
 
-This opens the decision room, Argo CD, Prometheus, and Jaeger. Complete any first-use OpenShift login or consent before starting the timer. You can also open each observability view independently:
+This opens the decision room, Argo CD, Prometheus, and Jaeger. Complete any first-use OpenShift login or consent before beginning the demo. You can also open each observability view independently:
 
 ```bash
 ./demo.sh prometheus

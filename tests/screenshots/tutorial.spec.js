@@ -26,7 +26,7 @@ test('capture explicitly labeled local rehearsal checkpoints',async({page})=>{
  await expect(page.locator('#evidence-content')).toContainText('REHEARSAL_FIXTURE');
  await shot('05-evidence.png');
  await page.getByRole('button',{name:'Release overview'}).click();
- await page.locator('#duration').selectOption('15');
+ await page.locator('#demo-mode').selectOption('extended');
  await page.locator('#profile').selectOption('production');
  await investigate('healthy','HOLD');
  await expect(page.getByRole('button',{name:'Approve promotion'})).toBeVisible();

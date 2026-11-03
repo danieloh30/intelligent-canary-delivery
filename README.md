@@ -150,9 +150,17 @@ git pull --ff-only
 
 This builds the local source and updates only the Quarkus control deployment with an immutable image digest, preserving its OAuth proxy, model secret, and checkout rollout. It does not reinstall operators or change the verified workload image. If the GitHub Secret is absent, releases remain disabled. To create or rotate that Secret during the update, provide `DEMO_GITHUB_TOKEN` in your environment; it is passed through a private temporary file, never a command argument or build context. Refresh the dashboard after completion. Run `./demo.sh install` only when you intend a full platform/workload image update.
 
+### Reset to a clean starting state
+
+Select **Reset demo to v1** in Presenter controls. In the cluster this clears the inventory fault, invalidates the current investigation, and requests v1 through Git unless v1 is already the Healthy stable release. Existing evaluation records remain available by ID. Reset refuses to interrupt a running investigation and never fabricates GO or bypasses rollout analysis. Offline rehearsal only resets presentation state.
+
+If v1 needs recovery, the overview shows **Awaiting baseline**. Wait for the 10% analysis stage and at least 30 observations per revision, then run a Development investigation for v1. Repeat at the 50% analysis stage. If an analysis has already ended Inconclusive, request the reset again to create a fresh Git revision. Once v1 is Healthy, select Reset again to clear the completed recovery investigation without creating another rollout. The clean overview shows v1 stable, no canary, empty signal values, and **Awaiting investigation**.
+
+Release changes immediately invalidate the previous current result. The overview also checks live pod identity, rollout stage, and decision expiry; historical results remain in Evidence explorer instead of appearing as the active verdict. The controller decision endpoint continues returning HOLD until fresh eligible evidence authorizes a rollout.
+
 ## Present the demo
 
-Select **10 minutes / Core** or **15 minutes / Extended** in the SPA. The timer is presenter-controlled; changing duration does not alter agent behavior or safety policy.
+Select **Core** or **Extended** in the SPA. Extended reveals Missing evidence; both modes support the governance walkthrough. There is no presentation timer, and the mode does not change agent behavior or safety policy.
 
 ### Core: 10 minutes
 
@@ -299,7 +307,7 @@ Localhost automatically tries the development token `demo-local`. For a custom l
 
 The launcher no longer reads Kubernetes Secrets on OpenShift. Local mode still supports the known development credential or an exported custom `DEMO_API_TOKEN`; a local handoff fragment is consumed and removed immediately. API authorization remains enabled. The manual token dialog remains a fallback for deployments without the SSO overlay.
 
-The core flow now explicitly visits Argo CD at baseline (Git revision and resource tree), recovered GO (Successful AnalysisRun and promotion), and NO-GO (Failed AnalysisRun, aborted Rollout, stable ReplicaSet). Prepare both tabs before starting the 10/15-minute timer.
+The core flow now explicitly visits Argo CD at baseline (Git revision and resource tree), recovered GO (Successful AnalysisRun and promotion), and NO-GO (Failed AnalysisRun, aborted Rollout, stable ReplicaSet). Prepare both tabs before beginning the Core or Extended flow.
 
 ### OpenShift Topology groups and connections
 
