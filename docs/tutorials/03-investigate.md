@@ -40,9 +40,11 @@ For a clean start, choose **Reset demo to v1** in Presenter controls. It clears 
 
 To verify that v1 is already the healthy stable baseline in **Release overview**, check all three indicators together:
 
-- The rollout badge in the checkout panel says **Healthy**.
-- **STABLE** shows **v1**.
-- **CANARY** shows **—**, indicating there is no separate active candidate.
+- The prominent **green** badge in the checkout panel says **Rollout: Healthy**.
+- The **green STABLE** label shows **v1**.
+- The **neutral CANARY** label shows **—** and **No active canary**, indicating there is no separate active candidate.
+
+The badge uses amber for paused/progressing rollouts, red for failures, and neutral gray when status is unavailable. Its rollout status is separate from the governed agent decision below.
 
 After selecting Reset in that state, Presenter controls reports **“Fault cleared. Healthy v1 baseline retained; dashboard reset.”** This confirms that reset reused the baseline rather than creating another release. **Awaiting investigation** is the expected empty decision state; it does not indicate an unhealthy rollout. The Candidate version selector prepares the next action and is not proof of which version is currently deployed.
 
@@ -51,6 +53,16 @@ Recovery still uses the normal gates: keep candidate **v1** and Development poli
 The clean starting screen shows **v1** stable, no active canary, empty metrics, and **Awaiting investigation**. This is expected: an initial screen has no release decision to show. Selecting v1 alone is not a reset, and an old v2 HOLD is not a current v1 verdict. Previous evaluations remain available by ID; active overview results are invalidated by releases, stage changes, and expiry.
 
 Choose **Core** or **Extended** in the header. Extended adds Missing evidence; the presentation has no timer.
+
+### Stable and canary in this demo
+
+**Stable** is the last successfully promoted rollout revision, used as the reference while a candidate is evaluated. **Canary** is the candidate revision receiving a limited share of requests before promotion. Its identity card is blue while active and neutral when no separate canary exists. These identity colors distinguish roles; the rollout badge and collected evidence report health.
+
+The normal release flow evaluates the canary at roughly 10% and 50% traffic before moving to 100%. Traffic proportions are approximated using pod counts. A GO permits the current analysis stage to pass; NO-GO fails the analysis and aborts the candidate, while HOLD withholds promotion. A fully promoted candidate becomes stable.
+
+The traffic percentages are configured in `deploy/gitops/rollout.yaml`, under `spec.strategy.canary.steps`. The `setWeight: 10`, `setWeight: 50`, and `setWeight: 100` steps request each traffic stage. Analysis steps between them reference `reasoning-gate`. The definition in `deploy/gitops/analysis.yaml` specifies how to check the effective decision; it does not set traffic percentages.
+
+Version names and rollout revisions are different: resetting can temporarily show v1 as both stable and canary because a fresh v1 pod template is being evaluated against the previous stable v1 revision. When that rollout becomes Healthy, the separate canary disappears.
 
 The application has three prepared behaviors:
 

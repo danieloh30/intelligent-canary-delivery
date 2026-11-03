@@ -9,6 +9,11 @@ let token=access||sessionStorage.getItem('canary-token')||(localHost?'demo-local
 if(token)sessionStorage.setItem('canary-token',token);
 function text(el,value){el.textContent=value;}
 function notice(message){$('#notice').hidden=!message;text($('#notice'),message||'');}
+function rolloutPhase(phase){
+ const badge=$('#rollout-phase'),value=phase.toLowerCase();
+ badge.dataset.state=value==='healthy'?'healthy':['paused','progressing','pending','reconciling'].includes(value)?'warning':['degraded','failed','error','aborted'].includes(value)?'danger':'neutral';
+ text(badge,'Rollout: '+phase);
+}
 async function api(path,method='GET'){
  const response=await fetch('/api'+path,{method,headers:token?{Authorization:'Bearer '+token}:{}});
  if(response.status===401){text($('#connection'),'Access required');if(!$('#access-dialog').open)$('#access-dialog').showModal();throw new Error('Enter a valid presenter token.');}
@@ -38,7 +43,8 @@ function render(){
  const e=state.latest||{},evidence=e.evidence,current=evidenceCurrent(e);
  const expired=!!e.decision&&Date.parse(e.decision.expiresAt)<=Date.now();
  agentCards(current?e:{});
- text($('#connection'),state.clusterEnabled?'Kubernetes connected':'Offline rehearsal');
+ text($('#connection'),state.clusterEnabled?(clusterView?.connected===false?'Cluster unavailable':'Kubernetes connected'):'Offline rehearsal');
+ if(!state.clusterEnabled)rolloutPhase('Offline');else if(clusterView?.connected&&releasePending())rolloutPhase('Reconciling');
  text($('#model'),state.mode==='fixture'?'DETERMINISTIC FIXTURES':'gpt-4o-mini');
  if(!state.clusterEnabled)notice(state.mode==='fixture'?'Offline rehearsal · deterministic fixtures, no LLM calls, no rollout actions.':'Offline evidence · live GPT-4o mini agents; no rollout actions.');
  if(evidence)renderEvidence(e);
@@ -69,6 +75,9 @@ function render(){
  if(!selectionInitialized&&clusterView?.connected){const version=releasePending()?state.releaseIntent.version:r.currentPodHash!==r.stableRS?clusterView.candidateVersion:'v2';if(version){selectScene(version==='v3'?'retry':'healthy');$('#revision').value=version;selectionInitialized=true;}}
  text($('#canary-version'),releasePending()?state.releaseIntent.version:r.currentPodHash&&r.currentPodHash===r.stableRS?'—':clusterView?.candidateVersion||'—');
  }
+ const canaryActive=!['—',''].includes($('#canary-version').textContent);
+ $('#canary-identity').dataset.active=String(canaryActive);
+ text($('#canary-description'),canaryActive?'Candidate under evaluation':'No active canary');
  $('#reset').disabled=state.resetEnabled===false||busy||releasing||e.status==='RUNNING';
  $('#evaluate').disabled=busy||releasing||e.status==='RUNNING';
  $('#release').disabled=!state.releaseEnabled||busy||releasing||e.status==='RUNNING';
@@ -89,9 +98,9 @@ async function poll(){
  try{
  const next=await api('/state');if(generation!==stateGeneration)return;state=next;
  if(state.clusterEnabled&&Date.now()-lastCluster>4000){lastCluster=Date.now();const c=await api('/cluster');if(generation!==stateGeneration)return;clusterView=c;
- if(!c.connected){text($('#connection'),'Cluster unavailable');notice(c.message);}else{const r=c.rollout?.status||{};text($('#rollout-phase'),r.phase||'Reconciling');const weight=r.canary?.weights?.canary?.weight;$('#traffic-weight').style.width=(weight??0)+'%';text($('#traffic-caption'),weight===undefined?'Traffic managed by Argo Rollouts':`${weight}% canary / ${100-weight}% stable`);}}
+ if(!c.connected){text($('#connection'),'Cluster unavailable');rolloutPhase('Unavailable');notice(c.message);}else{const r=c.rollout?.status||{};rolloutPhase(r.phase||'Reconciling');const weight=r.canary?.weights?.canary?.weight;$('#traffic-weight').style.width=(weight??0)+'%';text($('#traffic-caption'),weight===undefined?'Traffic managed by Argo Rollouts':`${weight}% canary / ${100-weight}% stable`);}}
  render();
- }catch(e){notice(e.message);}
+ }catch(e){if(state.clusterEnabled){clusterView={connected:false};rolloutPhase('Unavailable');render();}notice(e.message);}
 }
 async function action(fn){busy=true;$('#evaluate').disabled=true;try{await fn();await poll();}catch(e){notice(e.message);}finally{busy=false;render();}}
 function selectScene(value){scene=value;document.querySelectorAll('[data-scene]').forEach(b=>b.classList.toggle('selected',b.dataset.scene===scene));text($('#scene-question'),stories[scene][0]);text($('#scene-description'),stories[scene][1]);$('#revision').value=scene==='retry'?'v3':'v2';}

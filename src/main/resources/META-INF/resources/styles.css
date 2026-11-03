@@ -127,3 +127,27 @@
 
 #architecture .workshop-diagram{margin:20px 0 35px;padding:20px}#architecture h3{font-size:17px}.workshop-diagram-dialog{max-width:none}.workshop-diagram-toolbar button{font-size:13px;min-height:40px}
 @media(max-width:760px){nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.nav{width:auto;min-width:0}.breadcrumb{display:none}.header-right{width:100%;justify-content:space-between}.event span{overflow-wrap:anywhere}}
+
+/* Rollout health is prominent and remains distinct from the agent verdict. */
+.rollout-status{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;padding:9px 14px;border:1px solid #c9d3da;border-radius:999px;background:#eef2f5;color:#566775;font-size:12px;font-weight:700;line-height:1.4;white-space:nowrap}
+.rollout-status::before{content:"•";display:grid;place-items:center;width:16px;height:16px;border:1px solid currentColor;border-radius:50%;font-size:11px;line-height:1}
+.rollout-status[data-state="healthy"]{background:#187549;color:#fff;border-color:#105d38}
+.rollout-status[data-state="healthy"]::before{content:"✓"}
+.rollout-status[data-state="warning"]{background:#fff0c2;color:#744c00;border-color:#d9a638}
+.rollout-status[data-state="warning"]::before{content:"!"}
+.rollout-status[data-state="danger"]{background:#fbe4df;color:#902e25;border-color:#d58b80}
+.rollout-status[data-state="danger"]::before{content:"!"}
+@media(max-width:760px){.rollout-status{font-size:10px;padding:7px 9px;gap:5px}.rollout-panel .panel-heading{flex-wrap:wrap}}
+
+.release-identity{padding:12px;border:1px solid #dce4e8;border-radius:8px;min-width:105px}
+.release-identity .version-label{display:inline-block;padding:4px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px}
+.stable-identity{background:#f3faf6;border-color:#b6d9c3}
+.stable-identity .version-label{background:#dcefe3;color:#165c37}
+.stable-identity strong{color:#165c37}
+.canary-identity{background:#f2f6ff;border-color:#b9ccee}
+.canary-identity .version-label{background:#e0eaff;color:#234f92}
+.canary-identity strong{color:#234f92}
+.canary-identity[data-active="false"]{background:#f7f9fa;border-color:#dce4e8}
+.canary-identity[data-active="false"] .version-label{background:#e9eef1;color:#5c6e79}
+.canary-identity[data-active="false"] strong{color:#697b87}
+@media(max-width:760px){.release-identity{padding:10px;min-width:85px}.release-identity .version-label{font-size:9px;padding:4px 6px}.delivery-flow{flex-wrap:wrap}.flow-middle{min-width:60px}}
