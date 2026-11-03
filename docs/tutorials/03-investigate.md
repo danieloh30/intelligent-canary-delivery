@@ -90,12 +90,29 @@ The server commits the version, fresh release annotation, and analysis arguments
 !!! note "Enable dashboard releases before presenting"
     Configure the server GitHub credential using the [cluster setup instructions](02-cluster.md#enable-releases-from-the-dashboard). Without it, the release button stays disabled and explains the shell alternative: `./demo.sh release v2`. The shell command requires a clean working tree; the dashboard writes directly to GitHub. Run `git pull --ff-only` before later editing or releasing from your local checkout.
 
-Wait until the **10% analysis step** is running and both revisions have at least **30 request observations**. Run an investigation after the step begins so its evidence matches the current stage.
+Stay in **Release overview → Release progress**. The SPA now shows the complete stage sequence and the action to take:
+
+1. **10% canary / Warm-up before analysis:** the configured 15-second pause is running. There is no need to click during this pause.
+2. **Waiting for analysis readiness:** the analysis gate is active and the live rolling 60-second sample counts are filling. Check **Stable requests** and **Canary requests** separately; each needs at least **30**.
+3. **Ready to investigate · 10% canary:** the cue turns green, and **Investigate v2 at 10%** becomes available. The lower **Run investigation** button is highlighted too. Select either button to start the Java agents explicitly.
+4. After GO, watch the stage indicator advance to **50% canary**. Wait for the new green cue, then select **Investigate v2 at 50%**. The earlier stage's decision cannot authorize this stage.
+5. Once the final gate passes, the panel reports **Release fully promoted**. The candidate becomes stable.
+
+The live sample counts appear **before** any investigation. They are read-only observations refreshed every four seconds; they do not execute agents or make LLM calls. The metrics and **Requests in investigation** beneath the progress panel remain the frozen snapshot of the last applicable investigation. Readiness means the analysis gate and evidence are available; it does not guarantee a GO recommendation.
+
+!!! note "The 15-second pause is not your click window"
+    The pause precedes inline analysis. At the analysis gate, the rollout blocks while Argo polls the decision API. This demo configures **180 checks at five-second intervals**—roughly 15 minutes, plus execution overhead. These are HTTP checks of the saved policy result, not 180 seconds and not 180 LLM investigations. The SPA displays the AnalysisRun state and checks used so you can follow this without switching consoles.
+
+If the gate finishes **Inconclusive**, the panel explains that a fresh release/reset is required and disables investigation for that completed run. It never bypasses a gate. Missing, stale, or unavailable progress also withholds the ready cue. Selecting a different candidate version disables the stage-specific action until it matches the active rollout.
+
+Each Argo analysis gate consumes the result of a **four-agent Java/LLM investigation**, followed by deterministic Java policy validation. The gate polls the effective decision API; it does not run a single standalone agent or start another investigation on each poll.
+
+Investigations are manual here to give the presenter control over fault injection and explanation. Each gate needs fresh evidence because traffic and dependency load change. An automated implementation could start an investigation on gate entry while retaining the same policy checks; refreshing this SPA does not do that.
 
 !!! note "Traffic proportions are approximate"
     The demo uses replica proportions without a traffic-management provider. Ten replicas make 10% and 50% easy to explain, but the request share is not guaranteed to equal the replica share. The traffic generator closes each connection so new canary pods can receive requests.
 
-In the prepared Argo CD tab, open **canary-checkout**. Point out its Git revision and resource tree, including the Rollout and AnalysisTemplate. Return to the dashboard to continue.
+For optional deeper inspection, open **canary-checkout** in the prepared Argo CD tab and identify its Git revision, Rollout, and AnalysisTemplate. Routine stage tracking, sample readiness, agent activity, and controller logs are available in the SPA.
 
 ## 3. Inject the shared slowdown
 
@@ -103,7 +120,7 @@ In the UI:
 
 1. Choose **Shared slowdown** and candidate **v2**.
 2. Select **Inject 25s shared slowdown**.
-3. Select **Development / automatic** policy and **Run investigation**.
+3. Select **Development / automatic** policy. Once Release progress shows the green **Ready to investigate** cue, select **Investigate v2 at 10%** or **Run investigation**.
 
 ### Watch the Quarkus Java agents in the SPA
 
@@ -129,7 +146,7 @@ The appropriate initial result is **HOLD**. A known dependency cause does not ma
 <figcaption>Local rehearsal fixture: the shared slowdown fails the basic latency check and produces HOLD. The capture demonstrates the decision flow without making live model calls. Select the image for full resolution.</figcaption>
 </figure>
 
-Clear the fault, let affected observations drain from the **60-second window**, and investigate again. A healthy, sufficiently sampled observation can produce GO. In the Argo CD tab, show the Successful AnalysisRun and progression to the next stage. Repeat the evaluation when the rollout reaches its 50% analysis stage; a decision cannot authorize a different stage.
+Clear the fault, let affected observations drain from the **60-second window**, and investigate again. A healthy, sufficiently sampled observation can produce GO. In the Argo CD tab, show the Successful AnalysisRun and progression to the next stage. Repeat the evaluation when Release progress shows **Ready to investigate · 50% canary**; a decision cannot authorize a different stage.
 
 <figure markdown>
 
@@ -149,7 +166,7 @@ Clear the fault, let affected observations drain from the **60-second window**, 
 
 After the healthy release settles, choose **Hidden retries**, confirm candidate **v3**, and select **Release selected version through Git**.
 
-Wait for the new canary, its current analysis stage, and at least 30 observations per revision. Select **Run investigation** and follow the Java agents in the same SPA views. The optional shell equivalent is `./demo.sh release v3`.
+Watch Release progress for the active analysis gate and the green **Ready to investigate** cue, with at least 30 live observations for both revisions. Select the stage-specific **Investigate v3** action or **Run investigation**, and follow the Java agents in the same SPA views. The optional shell equivalent is `./demo.sh release v3`.
 
 The expected evidence pattern is:
 

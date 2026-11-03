@@ -20,6 +20,10 @@ class DemoResourceTest {
     @Test void fixturesCanNeverAuthorizeArgo(){given().header("Authorization","Bearer test-token").get("/api/analysis?revision=v3").then().statusCode(200).body("verdict",is("HOLD"));}
     @Test void invalidInputsAreRejected(){given().header("Authorization","Bearer test-token").post("/api/evaluate?scene=unknown").then().statusCode(400);given().header("Authorization","Bearer test-token").get("/api/logs/not-a-source").then().statusCode(400);}
     @Test void servesSpa(){given().get("/").then().statusCode(200).body(containsString("The decision room"));}
+    @Test void progressIsAuthenticatedReadOnlyAndExplicitlyOfflineInRehearsal(){
+        given().get("/api/progress").then().statusCode(401);
+        given().header("Authorization","Bearer test-token").get("/api/progress").then().statusCode(200).body("state",is("OFFLINE")).body("ready",is(false)).body("samplesAvailable",is(false));
+    }
     @Test void releasesRequireAuthenticationAndCannotWriteFromRehearsal(){
         given().post("/api/reset").then().statusCode(401);
         given().post("/api/release/v2").then().statusCode(401);

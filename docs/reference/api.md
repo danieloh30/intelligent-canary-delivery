@@ -7,6 +7,7 @@ All presenter and internal evidence endpoints require `Authorization: Bearer TOK
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | GET | `/api/state` | Execution mode, release availability, latest evaluation, and recent activity |
+| GET | `/api/progress` | Read live stage, analysis check budget, per-cohort counts, and investigation readiness without starting agents |
 | GET | `/api/cluster` | Rollout and Argo CD Application status |
 | POST | `/api/reset` | Clear faults and current presentation; restore v1 through Git when needed, preserving gates |
 | POST | `/api/release/{version}` | Commit v1/v2/v3 to GitHub; return version, SHA, and commit URL |
@@ -77,3 +78,10 @@ The application distinguishes three things:
 3. **Rollout outcome:** the controller's actual status after consuming the analysis result.
 
 The decision API rechecks release and stage identity. A pending, expired, fixture, or mismatched result returns HOLD. Never infer that a rollout advanced merely because an agent said GO; inspect the controller state.
+
+
+## Progress and investigation timing
+
+`GET /api/progress` returns `state`, `ready`, `revision`, `podHash`, `stepIndex`, `targetWeight`, `stages`, `stableRequests`, `canaryRequests`, `samplesAvailable`, `capturedAt`, `missing`, and AnalysisRun details (`analysisName`, `analysisPhase`, `checksCompleted`, `checksTotal`, `interval`). It is authenticated, briefly cached, and read-only. Its counts precede investigation and never replace the frozen evidence used for a decision. The browser withholds readiness for stale snapshots, mismatched stages/candidates, and unavailable telemetry. The investigation endpoint collects fresh evidence again when explicitly invoked.
+
+The configured 15-second pause occurs before the inline analysis step. During analysis, Argo polls the saved verdict up to 180 times at five-second intervals. This is roughly a 15-minute analysis budget, not a 15-second click window or 180 LLM calls. A completed Inconclusive run cannot be restarted by polling progress or starting another investigation; request a fresh Git release/reset.

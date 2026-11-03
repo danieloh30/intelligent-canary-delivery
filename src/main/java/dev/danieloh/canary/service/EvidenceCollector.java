@@ -2,39 +2,61 @@ package dev.danieloh.canary.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.annotation.PreDestroy;
+import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.*;
 import static dev.danieloh.canary.model.Domain.*;
 
 @ApplicationScoped
 public class EvidenceCollector {
     @Inject ClusterService cluster;
+    private final ExecutorService readers=Executors.newVirtualThreadPerTaskExecutor();
+    @PreDestroy void shutdown(){readers.shutdownNow();}
     public Evidence collect(String expectedRevision) {
+        try {return collect(expectedRevision,cluster.rollout());}
+        catch(Exception ex){return unavailable(expectedRevision);}
+    }
+    private Evidence unavailable(String revision) {
+        return new Evidence(UUID.randomUUID().toString(),Instant.now(),"LIVE_KUBERNETES_REQUESTS",revision,"",-1,
+            summarize(List.of()),summarize(List.of()),List.of(),List.of(),List.of("Rollout evidence unavailable"),"Release metadata unavailable");
+    }
+    private record PodRead(List<Map<String,Object>> observations,String hash,String error) {}
+    public Evidence collect(String expectedRevision,GenericKubernetesResource rollout) {
         List<String> missing=new ArrayList<>(), logs=new ArrayList<>();
         List<Map<String,Object>> stable=new ArrayList<>(),canary=new ArrayList<>();
         String stableHash="",canaryHash=""; int stepIndex=-1;
         try {
-            var rollout=cluster.rollout();
             var status=(Map<?,?>)rollout.getAdditionalProperties().get("status");
             stepIndex=((Number)status.getOrDefault("currentStepIndex",null)).intValue();
             stableHash=Objects.toString(status.get("stableRS"),"");
             canaryHash=Objects.toString(status.get("currentPodHash"),"");
             if(stableHash.isBlank()||stableHash.equals(canaryHash))missing.add("Distinct stable and canary revisions are not available");
+            final String baselineHash=stableHash;
+            List<Callable<PodRead>> tasks=new ArrayList<>();
             for(var pod:cluster.client().pods().inNamespace(cluster.namespace()).withLabel("app","checkout").list().getItems()) {
                 if(!"Running".equals(pod.getStatus().getPhase()))continue;
                 String hash=pod.getMetadata().getLabels().get("rollouts-pod-template-hash");
                 if(!stableHash.equals(hash)&&!canaryHash.equals(hash))continue;
-                try {
+                tasks.add(()->{try {
                     var data=cluster.mapper().readValue(cluster.request("http://"+pod.getStatus().getPodIP()+":8080/internal/observations","GET"),
                         new com.fasterxml.jackson.core.type.TypeReference<List<Map<String,Object>>>(){});
                     for(var item:data) {
                         item.put("podHash",hash);
-                        item.put("cohort",stableHash.equals(hash)?"stable":"canary");
+                        item.put("cohort",baselineHash.equals(hash)?"stable":"canary");
                     }
-                    if(stableHash.equals(hash))stable.addAll(data);else canary.addAll(data);
-                }catch(Exception ex){missing.add("Pod evidence unavailable: "+pod.getMetadata().getName());}
+                    return new PodRead(data,hash,"");
+                }catch(Exception ex){return new PodRead(List.of(),hash,"Pod evidence unavailable: "+pod.getMetadata().getName());}});
             }
-        }catch(Exception ex){missing.add("Rollout evidence unavailable");}
+            // Bound the complete read window even when several pods cannot be reached.
+            for(var future:readers.invokeAll(tasks,6,TimeUnit.SECONDS)) {
+                if(future.isCancelled()){missing.add("Pod evidence read timed out");continue;}
+                var read=future.get();
+                if(!read.error().isBlank())missing.add(read.error());
+                if(stableHash.equals(read.hash()))stable.addAll(read.observations());else canary.addAll(read.observations());
+            }
+        }catch(Exception ex){if(ex instanceof InterruptedException)Thread.currentThread().interrupt();missing.add("Rollout evidence unavailable");}
         Instant cutoff=Instant.now().minusSeconds(60);
         stable.removeIf(x->Instant.parse(x.get("at").toString()).isBefore(cutoff));
         canary.removeIf(x->Instant.parse(x.get("at").toString()).isBefore(cutoff));

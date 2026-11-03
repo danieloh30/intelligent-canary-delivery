@@ -21,6 +21,7 @@ public class DemoResource {
     @Inject InvestigationService investigations;
     @Inject EvidenceCollector collector;
     @Inject ClusterService cluster;
+    @Inject dev.danieloh.canary.service.RolloutProgressService progress;
     @Inject dev.danieloh.canary.service.GitReleaseService releases;
     @ConfigProperty(name="demo.ai-mode",defaultValue="live") String mode;
     @ConfigProperty(name="demo.role",defaultValue="control") String role;
@@ -37,6 +38,7 @@ public class DemoResource {
             "keyConfigured",System.getenv("OPENAI_API_KEY")!=null);
     }
     @GET @Path("/cluster") public Map<String,Object> cluster(){control();return cluster.status();}
+    @GET @Path("/progress") public dev.danieloh.canary.service.RolloutProgressService.Progress progress(){control();return progress.snapshot();}
     @POST @Path("/release/{version}") public Map<String,String> release(@PathParam("version") String version){control();synchronized(investigations){return releases.release(version);}}
     @POST @Path("/reset") public Map<String,String> reset(){control();synchronized(investigations){return releases.reset();}}
     @GET @Path("/logs/{source}") public List<String> logs(@PathParam("source") String source){control();return cluster.logs(source);}

@@ -1,4 +1,5 @@
 import {test,expect} from 'playwright/test';
+test.beforeEach(async({page})=>{await page.route('**/api/progress',r=>r.fulfill({json:{connected:false,state:'UNAVAILABLE',ready:false,message:'Progress not supplied by this fixture.',capturedAt:new Date().toISOString(),stages:[]}}));});
 
 for(const [phase,background,color] of [
  ['Healthy','rgb(24, 117, 73)','rgb(255, 255, 255)'],

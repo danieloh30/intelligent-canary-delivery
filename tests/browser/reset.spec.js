@@ -1,4 +1,5 @@
 import {test,expect} from 'playwright/test';
+test.beforeEach(async({page})=>{await page.route('**/api/progress',r=>r.fulfill({json:{connected:false,state:'UNAVAILABLE',ready:false,message:'Progress not supplied by this fixture.',capturedAt:new Date().toISOString(),stages:[]}}));});
 
 function evaluation(){return {id:'previous-v2',status:'COMPLETE',agents:{metrics:'COMPLETE'},findings:{},evidence:{id:'previous-v2',revision:'v2',stableRevision:'old-stable',rolloutStep:2,capturedAt:new Date().toISOString(),source:'LIVE_KUBERNETES_REQUESTS',traces:[{podHash:'old-canary'}],stable:{requests:100},canary:{requests:40,errorRate:0,p95Ms:490,attemptsPerCheckout:1}},decision:{effective:'HOLD',reason:'Previous release',expiresAt:new Date(Date.now()+120000).toISOString()}};}
 

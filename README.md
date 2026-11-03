@@ -158,6 +158,16 @@ If v1 needs recovery, the overview shows **Awaiting baseline**. Wait for the 10%
 
 Release changes immediately invalidate the previous current result. The overview also checks live pod identity, rollout stage, and decision expiry; historical results remain in Evidence explorer instead of appearing as the active verdict. The controller decision endpoint continues returning HOLD until fresh eligible evidence authorizes a rollout.
 
+### Follow rollout progress in the SPA
+
+**Release overview → Release progress** displays the configured stage sequence, active canary target, AnalysisRun phase, and completed/configured analysis checks. Live **Stable requests** and **Canary requests** counts cover a rolling 60-second window and refresh every four seconds before any agent investigation. The percentage is a replica-based target, not a measured request share.
+
+A green **Ready to investigate** cue and stage-specific button appear when the current analysis is active and both cohorts have at least 30 observations with complete telemetry. The main investigation button is highlighted too. Warm-up, stale/missing telemetry, a mismatched candidate, active agents, approval, and finished analyses have explicit instructions. A GO at 10% cannot authorize 50%; a fresh ready cue appears at the next gate. An Inconclusive run requires a fresh release/reset.
+
+The **15s pause is a warm-up before analysis**, not the investigation click window. The analysis template polls the saved policy verdict up to 180 times at five-second intervals (roughly 15 minutes plus overhead). Polls do not invoke the LLM. Investigations remain explicitly presenter-triggered for the demo; an automated implementation could trigger one on each gate entry while retaining evidence and policy checks.
+
+Authenticated **GET /api/progress** uses the existing Quarkus REST/Jackson and Kubernetes Client extensions. It reads current Rollout/AnalysisRun state and request observations, caches briefly, and never starts agents, stores an investigation, or changes a rollout. Pod observations are read concurrently within a bounded window; stage changes during a read invalidate readiness. The progress panel and the frozen investigation metrics are labeled separately. Argo CD is available for optional inspection, with routine progress and logs kept in the SPA.
+
 ## Present the demo
 
 Select **Core** or **Extended** in the SPA. Extended reveals Missing evidence; both modes support the governance walkthrough. There is no presentation timer, and the mode does not change agent behavior or safety policy.
@@ -165,7 +175,7 @@ Select **Core** or **Extended** in the SPA. Extended reveals Missing evidence; b
 ### Core: 10 minutes
 
 1. **Establish (1 minute).** Verify v1 is Healthy, traffic is flowing, and the model key works. Ask: “Should this release get more traffic?”
-2. **Noise (2.5 minutes).** Select Shared slowdown, candidate v2, then **Release selected version through Git** in the SPA. Wait until the 10% analysis is running and the canary has at least 30 observations. Select Shared slowdown and inject 25 seconds of latency. Investigate: the basic latency check fails; agents should HOLD. Clear the fault, wait for the affected 60-second window to drain, then investigate again. GO allows the current analysis step to proceed. Evaluate again at 50%.
+2. **Noise (2.5 minutes).** Select Shared slowdown, candidate v2, then **Release selected version through Git** in the SPA. Watch Release progress for the green ready cue at the 10% analysis gate, with at least 30 observations in both cohorts. Select Shared slowdown and inject 25 seconds of latency. Investigate: the basic latency check fails; agents should HOLD. Clear the fault, wait for the affected 60-second window to drain, then investigate again. GO allows the current analysis step to proceed. Evaluate again at 50%.
 3. **Gray failure (4 minutes).** Select Hidden retries, candidate v3, then **Release selected version through Git** in the SPA. Wait for canary samples, choose Hidden retries, and investigate. The basic HTTP check should pass, while correlated retry amplification supports NO-GO. Watch actual Rollouts status and pod logs for the abort and stable recovery.
 4. **Trust (1.5 minutes).** Inspect specialist findings, source labels, trace IDs, policy reasons, and the exported decision record.
 5. **Developer experience (1 minute).** Show the shared AnalysisTemplate reference and the Git release diff.
