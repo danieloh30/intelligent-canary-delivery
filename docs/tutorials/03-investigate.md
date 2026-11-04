@@ -76,9 +76,9 @@ The inventory fault is deliberately controlled. It makes the pattern reproducibl
 
 <figure markdown>
 
-[![Local rehearsal decision room showing the healthy baseline](../images/screenshots/01-baseline.png)](../images/screenshots/01-baseline.png)
+[![Current local rehearsal decision room after resetting the presentation](../images/screenshots/01-baseline.png)](../images/screenshots/01-baseline.png)
 
-<figcaption>Local rehearsal fixture: establish the baseline before injecting a fault. This SPA capture uses deterministic fixtures, not a live LLM or a live Kubernetes rollout. Select the image for full resolution.</figcaption>
+<figcaption>Current local rehearsal fixture after reset: Stable v1, no active canary, and Awaiting investigation. The Offline badge distinguishes this presentation view from a live Healthy rollout. This capture makes no LLM calls or cluster changes. Select the image for full resolution.</figcaption>
 </figure>
 
 ## 2. Release v2 through Git
@@ -134,6 +134,10 @@ A release starts GitOps reconciliation. The four Java agents start when you sele
 - **Live console → Quarkus control plane:** inspect actual Java pod logs, refreshed every four seconds. Switch to **Argo Rollouts controller** or **Argo CD controller** to follow deployment actions.
 - **Evidence explorer:** compare stable and canary request counts, p95, errors, and inventory attempts in the frozen window. Read the calculated context, then each specialist’s summary, recorded tool reads, evidence references, and limitations. Compare the agent recommendation with the effective Decision Policy result and its reason. Expand the raw observation, recommendation, and policy records for deeper inspection. Expired or historical decisions are labeled; recent request samples are only a subset of the aggregate window. Reloading retains the selected page and scenario in the same browser tab.
 
+[![Current SPA Agent activity view in an offline production-approval rehearsal](../images/screenshots/13-agent-activity.png)](../images/screenshots/13-agent-activity.png)
+
+*Local rehearsal fixture events in Live console. This illustrates where presenter activity and policy events appear; it is not a live LLM trace.*
+
 The agents execute in one Quarkus service: Metrics Analyst first, Dependency Investigator and Release Analyst concurrently, then Canary Decision Agent. Tool reads appear during execution; specialist findings are published when the workflow completes. These views expose recorded activity and structured outputs, not private model reasoning.
 
 Both revisions should show increased inventory latency. The basic static check fails while the agents investigate whether the candidate caused the change. In the highlighted **PASS REQUIRES BOTH** panel, the limits are **error rate ≤ 1%** and **p95 latency ≤ 500 ms**. p95 means the 95th percentile: at least 95% of observed requests finish within that latency, and up to 5% take longer. At this limit, at least 95% must finish within half a second.
@@ -173,9 +177,9 @@ Clear the fault, let affected observations drain from the **60-second window**, 
 
 <figure markdown>
 
-[![Recorded live Argo CD view of a Successful AnalysisRun](../images/screenshots/07-argo-success.jpg)](../images/screenshots/07-argo-success.jpg)
+[![Current SPA Agent activity showing a recovered GO in local rehearsal](../images/screenshots/07-recovered-activity.png)](../images/screenshots/07-recovered-activity.png)
 
-<figcaption>Recorded live-cluster evidence: a Successful AnalysisRun from the Kubernetes rehearsal. Inspect its metric measurement for GO. AnalysisRun names and retained history vary between rehearsals. Select the image for full resolution.</figcaption>
+<figcaption>Current local rehearsal Agent activity: the policy event changes from HOLD to GO after a fresh healthy investigation. These fixture events demonstrate the SPA view; they are not live LLM execution or a Successful AnalysisRun. Select the image for full resolution.</figcaption>
 </figure>
 
 ## 4. Release the retry regression
@@ -205,6 +209,10 @@ In this demo, stable uses **one inventory attempt per checkout**; v3 receives fo
 
 Together, scenario 02 demonstrates **avoiding incorrect release attribution**, while scenario 03 demonstrates **detecting a regression that basic HTTP checks miss**. Inspect the actual recommendation, effective policy decision, and controller outcome separately.
 
+[![Current SPA presenter guide with enterprise context and evidence talking points](../images/screenshots/11-enterprise-guide.png)](../images/screenshots/11-enterprise-guide.png)
+
+*Current Presenter guide: enterprise examples, evidence to show, sample presenter lines, and useful discussion during sampling and recovery waits. The throughput calculations are illustrative, not a cluster benchmark.*
+
 
 <figure markdown>
 
@@ -217,9 +225,9 @@ Argo Rollouts should abort the candidate. Switch to Argo CD and open the Failed 
 
 <figure markdown>
 
-[![Recorded live Argo CD view of a Failed AnalysisRun from the retry regression](../images/screenshots/08-argo-failed.jpg)](../images/screenshots/08-argo-failed.jpg)
+[![Current Evidence explorer highlighting the recorded v3 NO-GO recommendation and policy decision](../images/screenshots/08-recorded-decision.png)](../images/screenshots/08-recorded-decision.png)
 
-<figcaption>Recorded live-cluster evidence: a Failed AnalysisRun from the retry rehearsal. Inspect its metric measurement for NO_GO. This is retained run history, not a claim that the current application is degraded; resource names vary. Select the image for full resolution.</figcaption>
+<figcaption>Recorded live agent/policy output captured on 2026-11-04 UTC, rendered in the current SPA. Both NO-GO verdicts are highlighted; the recommendation identifies retry amplification. Expiry is shown separately because the rejected rollout outcome remains historical evidence. Production approval does not override NO-GO. No new investigation was run for this image. Select the image for full resolution.</figcaption>
 </figure>
 
 ## 5. Explain the evidence
@@ -237,7 +245,7 @@ The trace tool exposes request summaries with real OTel trace IDs. Switch to the
 
 <figure markdown>
 
-[![Local rehearsal evidence explorer with observations and decision details](../images/screenshots/05-evidence.png)](../images/screenshots/05-evidence.png)
+[![Current local rehearsal Evidence explorer with comparisons, highlighted verdicts, tool reads, and limitations](../images/screenshots/05-evidence.png)](../images/screenshots/05-evidence.png)
 
 <figcaption>Local rehearsal fixture: inspect the source label, observation window, findings, and policy result. Fixture identifiers are illustrative; use the live investigation's trace IDs when opening Jaeger on Kubernetes. Select the image for full resolution.</figcaption>
 </figure>

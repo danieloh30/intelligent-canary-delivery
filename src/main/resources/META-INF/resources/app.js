@@ -39,6 +39,12 @@ function evidenceCurrent(e){
  const r=clusterView?.rollout?.status;
  return !!r&&!releasePending()&&clusterView.candidateVersion===e.evidence.revision&&r.currentStepIndex===e.evidence.rolloutStep&&e.evidence.traces?.some(x=>x.podHash===r.currentPodHash);
 }
+function retainedNoGo(e){
+ const r=clusterView?.rollout?.status;
+ return !!(state.clusterEnabled&&clusterView?.connected&&!releasePending()&&e.decision?.effective==='NO_GO'&&e.evidence
+  &&(r?.abort===true||['Degraded','Failed','Error'].includes(r?.phase))&&clusterView.candidateVersion===e.evidence.revision
+  &&e.evidence.traces?.some(x=>x.podHash===r.currentPodHash&&x.cohort!=='stable'));
+}
 function renderProgress(){
  const p=progressView,r=clusterView?.rollout?.status;
  const stale=!p||Date.now()-progressReceivedAt>12000||Date.now()-Date.parse(p.capturedAt)>15000;
@@ -89,20 +95,21 @@ async function pollProgress(){
 function render(){
  const e=state.latest||{},evidence=e.evidence,current=evidenceCurrent(e);
  const expired=!!e.decision&&Date.parse(e.decision.expiresAt)<=Date.now();
- agentCards(current?e:{});
+ const retained=retainedNoGo(e);
+ agentCards(current||retained?e:{});
  text($('#connection'),state.clusterEnabled?(clusterView?.connected===false?'Cluster unavailable':'Kubernetes connected'):'Offline rehearsal');
  if(!state.clusterEnabled)rolloutPhase('Offline');else if(clusterView?.connected&&releasePending())rolloutPhase('Reconciling');
  text($('#model'),state.mode==='fixture'?'DETERMINISTIC FIXTURES':'gpt-4o-mini');
  if(!state.clusterEnabled)notice(state.mode==='fixture'?'Offline rehearsal · deterministic fixtures, no LLM calls, no rollout actions.':'Offline evidence · live GPT-4o mini agents; no rollout actions.');
  if(evidence)renderEvidence(e);
- if(evidence&&current&&!expired){const c=evidence.canary,s=evidence.stable;
+ if(evidence&&(current&&!expired||retained)){const c=evidence.canary,s=evidence.stable;
  text($('#stable-version'),evidence.stableRevision.length>12?evidence.stableRevision.slice(0,10):evidence.stableRevision);text($('#canary-version'),evidence.revision);
  text($('#success'),((1-c.errorRate)*100).toFixed(1)+'%');text($('#latency'),c.p95Ms.toFixed(0));text($('#attempts'),c.attemptsPerCheckout.toFixed(2)+'×');text($('#samples'),String(s.requests+c.requests));
  const pass=c.errorRate<=.01&&c.p95Ms<=500;const sv=$('#static-verdict');text(sv,c.requests<30?'Insufficient samples':pass?'PASS':'FAIL');sv.className=c.requests<30?'hold':pass?'good':'bad';
  const d=e.decision;const effective=$('#effective-verdict');text(effective,d?d.effective.replace('_','-'):e.status==='RUNNING'?'Investigating…':'Awaiting investigation');effective.className=d?.effective==='GO'?'good':d?.effective==='NO_GO'?'bad':'hold';
- text($('#policy-reason'),d?.reason||'Specialists are collecting and correlating evidence.');
- text($('#source'),evidence.source.replaceAll('_',' '));text($('#evaluation-id'),e.id+' · '+new Date(evidence.capturedAt).toLocaleTimeString());
- $('#approve').hidden=!d?.approvalRequired;
+ text($('#policy-reason'),retained?`Recorded NO-GO for this aborted rollout. ${d.reason}${expired?' Evidence expired; retained as an outcome, not fresh authorization.':''}`:d?.reason||'Specialists are collecting and correlating evidence.');
+ text($('#source'),retained?'Recorded aborted-rollout outcome · frozen evidence':evidence.source.replaceAll('_',' '));text($('#evaluation-id'),e.id+' · '+new Date(evidence.capturedAt).toLocaleTimeString()+(retained?' · retained NO-GO':''));
+ $('#approve').hidden=retained||!d?.approvalRequired;
  }else{
  for(const id of ['success','latency','attempts','samples'])text($('#'+id),'—');
  text($('#static-verdict'),'Awaiting signals');$('#static-verdict').className='hold';
@@ -144,18 +151,22 @@ function highlightFinding(el,value){
 function evidenceList(parent,title,items){parent.append(evidenceNode('h4','',title));const list=evidenceNode('ul','evidence-list');for(const item of items)list.append(evidenceNode('li','',item));parent.append(list);}
 function renderEvidence(e){
  const v=e.evidence,expired=!!e.decision&&Date.parse(e.decision.expiresAt)<=Date.now(),current=evidenceCurrent(e);
- const key=JSON.stringify([e,expired,current]);if(key===evidenceRenderKey)return;evidenceRenderKey=key;
+ const retained=retainedNoGo(e);
+ const key=JSON.stringify([e,expired,current,retained]);if(key===evidenceRenderKey)return;evidenceRenderKey=key;
  const host=$('#evidence-content');host.replaceChildren();
  const num=n=>Number.isFinite(Number(n))?Number(n).toFixed(2):'Unavailable';
  const pct=n=>Number.isFinite(Number(n))?(Number(n)*100).toFixed(2)+'%':'Unavailable';
  const stable=v.stable||{},canary=v.canary||{},traces=v.traces||[],missing=v.missing||[];
  const snapshot=evidenceNode('section','evidence-snapshot');snapshot.append(evidenceNode('span','eyebrow','FROZEN INVESTIGATION EVIDENCE'),evidenceNode('h3','',`Candidate ${v.revision} · rollout step ${v.rolloutStep}`));
- snapshot.append(evidenceNode('p','',`Captured ${new Date(v.capturedAt).toLocaleString()} · ${v.source}. These observations do not update as traffic recovers. Run another investigation to capture a new window.`));
+ snapshot.append(evidenceNode('p','',`Captured ${new Date(v.capturedAt).toLocaleString()} · ${v.source}. These observations do not update as traffic recovers. ${retained?'Recorded rejection of this rollout; request a fresh release to investigate another run.':'Run another investigation to capture a new window.'}`));
  snapshot.append(evidenceNode('p','mono',`Investigation ${e.id} · stable identity ${v.stableRevision}`));
- snapshot.append(evidenceNode('p',expired||!current?'hold':'good',expired?'Decision expired — retained for inspection; fresh evidence is required for a new decision.':!current?'Historical investigation — this snapshot does not authorize the current rollout stage.':e.decision?`Decision freshness deadline: ${new Date(e.decision.expiresAt).toLocaleTimeString()} (120 seconds from capture).`:'Investigation in progress — findings appear as the agents finish.'));
+ snapshot.append(evidenceNode('p',expired||!current?'hold':'good',retained?'Recorded NO-GO for this aborted rollout. '+(expired?'Evidence expired; the rejection remains part of the rollout history.':'The rejection remains part of the rollout history.'):expired?'Decision expired — retained for inspection; fresh evidence is required for a new decision.':!current?'Historical investigation — this snapshot does not authorize the current rollout stage.':e.decision?`Decision freshness deadline: ${new Date(e.decision.expiresAt).toLocaleTimeString()} (120 seconds from capture).`:'Investigation in progress — findings appear as the agents finish.'));
  host.append(snapshot);
  const decision=evidenceNode('section','evidence-decision');decision.append(evidenceNode('h3','','Recommendation → Decision Policy'));
- decision.append(evidenceNode('p','',`Agent recommendation: ${e.recommendation?.verdict||'Pending'} → effective decision: ${e.decision?.effective||'Pending'}${expired?' (expired)':''}.`));
+ const verdictLine=evidenceNode('p','decision-verdict-line');
+ const verdictNode=value=>evidenceNode('strong','evidence-verdict '+(value==='NO_GO'?'bad':value==='GO'?'good':'hold'),(value||'Pending').replaceAll('_','-'));
+ verdictLine.append(document.createTextNode('Agent recommendation: '),verdictNode(e.recommendation?.verdict),document.createTextNode(' → effective decision: '),verdictNode(e.decision?.effective));decision.append(verdictLine);
+ if(expired)decision.append(evidenceNode('p','muted','Evidence expired · recorded decision retained for inspection. This does not authorize a new rollout action.'));
  decision.append(highlightFinding(evidenceNode('p'),e.recommendation?.summary||'The decision agent has not returned a recommendation yet.'));
  decision.append(evidenceNode('p','',`Policy reason: ${e.decision?.reason||'Awaiting Decision Policy validation'}`));
  decision.append(evidenceNode('p','muted',`Policy: ${e.decision?.policy||e.profile||'Unknown'} · human approval ${e.decision?.approvalRequired?'required':e.decision?'not required by this decision':'not assessed'}. Saved policy output is authoritative; the comparisons below explain the evidence.`));

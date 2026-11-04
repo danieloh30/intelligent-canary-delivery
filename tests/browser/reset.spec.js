@@ -58,3 +58,17 @@ test('a newer shell release supersedes an earlier dashboard reset intent',async(
  await page.goto('/');await expect(page.locator('#effective-verdict')).toHaveText('HOLD');
  await expect(page.locator('#latency')).toHaveText('490');
 });
+
+test('NO-GO stays visible after abort resets the step and evidence expires, then clears for a new release',async({page})=>{
+ const latest=evaluation();latest.decision.effective='NO_GO';latest.decision.reason='Canary-specific retry amplification';latest.recommendation={verdict:'NO_GO',summary:'Canary-specific retry amplification',limitations:[],evidenceIds:[latest.id]};
+ const rollout={spec:{},status:{phase:'Progressing',currentPodHash:'old-canary',stableRS:'old-stable',currentStepIndex:2,abort:false}};
+ await page.route('**/api/state',r=>r.fulfill({json:{mode:'live',clusterEnabled:true,latest,events:[]}}));
+ await page.route('**/api/cluster',r=>r.fulfill({json:{connected:true,candidateVersion:'v2',stableVersion:'v1',rollout}}));
+ await page.goto('/');await expect(page.locator('#effective-verdict')).toHaveText('NO-GO');
+ rollout.status.phase='Degraded';rollout.status.abort=true;rollout.status.currentStepIndex=0;latest.decision.expiresAt=new Date(Date.now()-1000).toISOString();
+ await expect(page.locator('#policy-reason')).toContainText('Recorded NO-GO for this aborted rollout',{timeout:10000});
+ await expect(page.locator('#effective-verdict')).toHaveText('NO-GO');await expect(page.locator('#policy-reason')).toContainText('Evidence expired');await expect(page.locator('#approve')).toBeHidden();
+ await page.locator('[data-tab="evidence"]').click();await expect(page.locator('.evidence-verdict')).toHaveText(['NO-GO','NO-GO']);await expect(page.locator('.evidence-verdict').first()).toHaveCSS('background-color','rgb(251, 228, 223)');
+ await page.locator('[data-tab="overview"]').click();rollout.status.currentPodHash='new-canary';rollout.status.phase='Progressing';rollout.status.abort=false;
+ await expect(page.locator('#effective-verdict')).toHaveText('Awaiting investigation',{timeout:10000});
+});

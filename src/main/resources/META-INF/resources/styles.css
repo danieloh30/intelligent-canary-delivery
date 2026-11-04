@@ -209,3 +209,5 @@
 .safety-limits .limit-example{padding-top:12px;border-top:1px solid #d0dfe4}
 
 .enterprise-context{grid-column:1/-1}.enterprise-scenarios{display:grid;grid-template-columns:1fr 1fr;gap:28px}.enterprise-scenarios p{line-height:1.9}.enterprise-scenarios a{color:var(--accent);overflow-wrap:anywhere}@media(max-width:760px){.enterprise-scenarios{grid-template-columns:1fr;gap:12px}}
+
+#evidence-content .decision-verdict-line{font-size:16px;font-weight:600;line-height:2.2;overflow-wrap:anywhere}.evidence-verdict{display:inline-block;padding:3px 12px;border:1px solid currentColor;border-radius:7px;background:#f4f7f8;font-size:20px;line-height:1.5}.evidence-verdict.bad{background:#fbe4df}.evidence-verdict.good{background:#e3f2e8}.evidence-verdict.hold{background:#fff3ce}

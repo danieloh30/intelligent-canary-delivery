@@ -12,6 +12,16 @@ The cluster installation targets a fresh **OpenShift 4.22** cluster. The applica
 
 **Decision Policy** is implemented as deterministic Java/Quarkus rules (`service/DecisionPolicy.java`). It enforces minimum samples and evidence freshness, rejects missing evidence or unresolved limitations, applies error/latency safety limits, and requires human approval for eligible Production promotions. The four LLM agents recommend; these fixed rules determine the effective decision consumed by Argo. Existing **Production / approval → Approve promotion** provides the demo’s HITL step; present it in Extended mode. Approval rechecks the rules and cannot override missing/stale evidence or hard safety limits.
 
+## Current demo views
+
+[![Current release progress showing a recorded rejected v3 candidate](docs/images/screenshots/10-cluster-progress.png)](docs/images/screenshots/10-cluster-progress.png)
+
+Recorded live cluster responses from 2026-11-04 UTC rendered in the current SPA: the 10% stage is blocked, basic HTTP checks pass, and NO-GO remains visible as the rejected rollout's outcome. This is recorded failure evidence, not the clean starting baseline.
+
+[![Current Evidence explorer highlighting a recorded NO-GO recommendation and effective decision](docs/images/screenshots/08-recorded-decision.png)](docs/images/screenshots/08-recorded-decision.png)
+
+Recorded live agent/policy output: both verdicts are prominent, while evidence expiry is shown separately. [Explore the refreshed specialist evidence view](docs/images/screenshots/05-evidence.png) (offline rehearsal) and [enterprise presenter guide](docs/images/screenshots/11-enterprise-guide.png). Every image opens at full resolution.
+
 ## The story
 
 A checkout service calls inventory. Three prepared release behaviors make the demonstration reproducible:
@@ -158,7 +168,7 @@ Select **Reset demo to v1** in Presenter controls. In the cluster this clears th
 
 If v1 needs recovery, the overview shows **Awaiting baseline**. Wait for the 10% analysis stage and at least 30 observations per revision, then run a Development investigation for v1. Repeat at the 50% analysis stage. If an analysis has already ended Inconclusive, request the reset again to create a fresh Git revision. Once v1 is Healthy, select Reset again to clear the completed recovery investigation without creating another rollout. The clean overview shows a green **Rollout: Healthy** badge, v1 stable, no canary, empty signal values, and **Awaiting investigation**. Rollout badges use amber for paused/progressing states, red for failures, and gray for unavailable status. Stable identity is green, an active canary is blue, and an absent canary is neutral with **No active canary**. These role colors are separate from health.
 
-Release changes immediately invalidate the previous current result. The overview also checks live pod identity, rollout stage, and decision expiry; historical results remain in Evidence explorer instead of appearing as the active verdict. The controller decision endpoint continues returning HOLD until fresh eligible evidence authorizes a rollout.
+Release changes immediately invalidate the previous current result. The overview also checks live pod identity, rollout stage, and decision expiry; historical results remain in Evidence explorer instead of appearing as the active verdict. A matching NO-GO is retained as the recorded outcome when Argo aborts that rollout, even if its step index resets or evidence expires; a new release/reset clears it. It is labeled historical evidence and never becomes fresh authorization. Evidence explorer prominently highlights the agent recommendation and effective verdict, with expiry separate from the saved result. The controller decision endpoint continues returning HOLD until fresh eligible evidence authorizes a rollout.
 
 The dashboard uses versioned application assets and explicit no-store headers for its mutable HTML, scripts, styles, and diagrams. This avoids mixing new HTML with JavaScript/CSS previously cached as immutable for 24 hours. After an upgrade, reload the page once; the versioned URLs bypass legacy asset entries. The policy selector and single investigation action share one readiness area: choose Development / no approval for the core flow, or Production / approval before a fresh investigation for HITL.
 
@@ -337,7 +347,7 @@ The console may omit the custom Argo Rollout checkout node; connections targetin
 
 ### Tutorial screenshots
 
-The tutorial includes real OpenShift Topology and Argo CD AnalysisRun screenshots, plus clearly labeled local rehearsal views of HOLD, GO, NO-GO, evidence, and production approval. Each figure is placed beside its demo step and opens at full resolution. Regenerate the six SPA figures against the explicit offline fixture server:
+The README and tutorials use the current SPA for baseline, HOLD, recovered GO, retry NO-GO, evidence, approval, architecture, agent activity, enterprise guide, and missing-evidence HOLD images. Older OpenShift/Argo console screenshots have been replaced. Captions distinguish offline rehearsal from read-only recorded live cluster responses rendered in the current UI. Each image opens at full resolution. Regenerate the offline figures against the explicit fixture server:
 
 ```bash
 ./demo.sh rehearsal             # terminal 1; default port 8095
@@ -346,7 +356,7 @@ npx playwright install chromium
 npm run screenshots
 ```
 
-Use `DEMO_URL` and `DEMO_API_TOKEN` if you changed the local URL or credential. Capture refuses to run unless the server reports fixture mode with cluster actions disabled. Cluster screenshots are recorded from the actual OpenShift and Argo CD UI; they are not synthesized by the fixture script.
+Use `DEMO_URL` and `DEMO_API_TOKEN` if you changed the local URL or credential. Rehearsal capture refuses to run unless the server reports fixture mode with cluster actions disabled. To render recorded cluster views, also set `DEMO_SCREENSHOT_SNAPSHOT` to a private JSON snapshot containing `capturedAt` and GET responses for `/api/state`, `/api/cluster`, `/api/progress`, and `/api/logs/rollouts`. The recorded-data capture blocks every non-GET request, fixes the browser clock to capture time, and never starts agents or changes the cluster. Without that file, the recorded-data test is skipped. See [capture provenance](docs/images/screenshots/README.md).
 
 Jaeger uses a bounded in-memory store of 10,000 traces, a `384MiB` Go soft memory budget inside its `512Mi` container limit, and startup/readiness/liveness probes. Trace retention is count-based and ephemeral; recent demo traces remain searchable, while old traces are evicted and restarts clear storage. See troubleshooting for OTLP receiver restarts and expected Fabric8 notices about Argo’s served `v1alpha1` APIs.
 

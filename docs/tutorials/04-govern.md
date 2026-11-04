@@ -38,11 +38,32 @@ The presenter token authorizes this demonstration action. Production identity, r
 
 ## 2. Withhold required evidence
 
-Switch **Demo mode** to **Extended** and choose **Missing evidence**.
+The lesson is **absence of evidence is not evidence of safety**. This scenario demonstrates a required evidence boundary, rather than another application failure.
 
-In cluster mode, this scene deliberately withholds trace observations and records a presenter-injected trace evidence outage. Metrics remain observations from real requests. The policy requires HOLD because the mandatory evidence is incomplete.
+### Enterprise context and attendee insight
 
-This is an explicit fault injection, not an unnoticed failure of the trace backend.
+**Illustrative case:** a healthy-looking release coincides with a tracing collector outage, telemetry pipeline misconfiguration, or an access problem. HTTP success and latency remain green, but the platform cannot inspect required dependency observations. Promoting on that partial picture would turn uncertainty into permission.
+
+In this demo, selecting Missing evidence and running an investigation deliberately withholds trace observations and records a **presenter-injected trace evidence outage**. Metrics remain observations from real cluster requests. It does not stop Jaeger or demonstrate an actual tracing backend failure. The recorded missing prerequisite makes deterministic Decision Policy return **HOLD**, irrespective of an optimistic model recommendation.
+
+### Presenter sequence
+
+1. Use a healthy **v2** candidate at an active analysis gate, with no shared slowdown and at least 30 observations in both cohorts. A completed/aborted gate needs a fresh release first.
+2. Select **Development / no approval** to isolate evidence completeness from the separate human-approval example.
+3. Switch **Demo mode → Extended**, choose **Missing evidence**, confirm candidate v2, and run the stage-specific investigation. Selecting the scenario alone does not run agents or change the cluster.
+4. Open **Evidence explorer**. Show healthy HTTP signals alongside the empty trace observations and missing-evidence entry in the raw observation window. Then show **Recommendation → Decision Policy**, the effective HOLD, and its missing-evidence reason. Distinguish any agent uncertainty from the platform's mandatory prerequisite.
+5. Explain that **Approve promotion cannot override missing evidence**. An approval supplies human authorization; it cannot supply observations that were never collected. NO-GO rejects an evidenced regression; this HOLD withholds judgment because required information is absent.
+6. Choose **Healthy release**, confirm the same active candidate, and investigate again to collect a fresh complete snapshot. This clears the scene's deliberate trace withholding; it does not repair a real external outage. If fresh evidence meets all rules and the agents support promotion, Development can produce GO; Production additionally requires eligible human approval.
+
+**Say:** “The dashboard is green, but our required trace evidence is unavailable. The platform holds rather than turning uncertainty into permission. We restore evidence and reassess.”
+
+**Audience takeaway:** trust in automation comes from explicit evidence requirements, controlled failure behavior, and reviewable decisions—not confidence in model wording. This is one deliberate missing-trace case; it is not a complete production observability or compliance system.
+
+[![Current local rehearsal showing healthy HTTP checks with HOLD for missing trace evidence](../images/screenshots/15-missing-evidence.png)](../images/screenshots/15-missing-evidence.png)
+
+*Local rehearsal fixture: healthy HTTP metrics do not satisfy the required evidence contract. The deliberate missing-trace scenario produces HOLD without a live telemetry outage or model call. Inspect the missing entry and saved policy reason in Evidence explorer.*
+
+Scenario 02 asks whether a slowdown is shared, scenario 03 exposes hidden retry cost, and scenario 04 shows where automation must stop because it cannot justify a decision.
 
 ## 3. Inspect the deterministic checks
 

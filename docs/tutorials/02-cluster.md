@@ -64,13 +64,17 @@ Secrets pass through private temporary files and Kubernetes Secrets. They do not
 
 Check that the Argo CD Application is synchronized, the initial checkout release is healthy, and all workloads are ready. Confirm controller labels and log access; operator versions can use different labels.
 
-[![Live OpenShift Topology with delivery and observability application groups](../images/screenshots/09-topology.jpg)](../images/screenshots/09-topology.jpg)
+[![Current SPA delivery architecture and four-agent workflow](../images/screenshots/12-architecture.png)](../images/screenshots/12-architecture.png)
 
-*Recorded live cluster: identify `canary-delivery` and `canary-observability`, the runtime logos, and declared connections. The checkout Rollout may be absent from the console Topology view; it is visible in Argo CD. Click any screenshot to inspect the full-resolution image.*
+*Current SPA Architecture view: identify delivery components and the four-agent workflow. This is an architectural diagram, not an OpenShift Topology capture or proof of runtime health. Click any screenshot for full resolution.*
 
-[![Live Argo CD resource tree showing the healthy checkout Rollout and AnalysisTemplate](../images/screenshots/10-argo-tree.jpg)](../images/screenshots/10-argo-tree.jpg)
+[![Current SPA release progress with a recorded blocked v3 candidate](../images/screenshots/10-cluster-progress.png)](../images/screenshots/10-cluster-progress.png)
 
-*Recorded live cluster after baseline recovery: point to Healthy, Synced, the Git revision, `reasoning-gate`, the checkout Rollout, and its ReplicaSets/AnalysisRuns. AnalysisRun history can contain previous failed canaries even while the current release is healthy. Your revision names and timestamps will differ.*
+*Recorded live cluster responses captured on 2026-11-04 UTC and rendered in the current SPA. This example shows a rejected v3 candidate at 10%, stable v1, passing HTTP checks, and the retained NO-GO outcome. It illustrates failure inspection, not installation readiness: your starting baseline should show Healthy / Stable v1. No new rollout or model call was made to create this capture.*
+
+[![SPA Live console displaying recorded Argo Rollouts controller logs](../images/screenshots/14-controller-logs.png)](../images/screenshots/14-controller-logs.png)
+
+*Recorded controller logs from the same read-only cluster snapshot, displayed in Live console. Inspect the aborted flag and candidate ReplicaSet scaling; timestamps and resource names vary between runs.*
 
 
 Retrieve the presenter token locally:
