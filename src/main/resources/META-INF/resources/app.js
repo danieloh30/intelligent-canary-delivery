@@ -137,7 +137,7 @@ function render(){
  if(state.clusterEnabled){
  text($('#stable-version'),clusterView?.stableVersion||'—');
  const r=clusterView?.rollout?.status||{};
- if(!selectionInitialized&&clusterView?.connected){const version=releasePending()?state.releaseIntent.version:r.currentPodHash!==r.stableRS?clusterView.candidateVersion:'v2';if(version){selectScene(version==='v3'?'retry':'healthy');$('#revision').value=version;selectionInitialized=true;}}
+ if(!selectionInitialized&&clusterView?.connected){const version=releasePending()?state.releaseIntent.version:r.currentPodHash!==r.stableRS?clusterView.candidateVersion:'v2';if(version){selectScene(version==='v3'?'retry':'healthy');selectRevision(version);selectionInitialized=true;}}
  text($('#canary-version'),releasePending()?state.releaseIntent.version:r.currentPodHash&&r.currentPodHash===r.stableRS?'—':clusterView?.candidateVersion||'—');
  }
  const canaryActive=!['—',''].includes($('#canary-version').textContent);
@@ -244,16 +244,17 @@ async function poll(){
  }catch(e){if(state.clusterEnabled){clusterView={connected:false};rolloutPhase('Unavailable');render();}notice(e.message);}
 }
 async function action(fn){busy=true;$('#evaluate').disabled=true;try{await fn();await poll();}catch(e){notice(e.message);}finally{busy=false;render();}}
-function selectScene(value){scene=value;selectionInitialized=true;sessionStorage.setItem('canary-scene',scene);document.querySelectorAll('[data-scene]').forEach(b=>b.classList.toggle('selected',b.dataset.scene===scene));text($('#scene-question'),stories[scene][0]);text($('#scene-description'),stories[scene][1]);$('#revision').value=scene==='retry'?'v3':'v2';}
+function selectRevision(value){$('#revision').value=value;sessionStorage.setItem('canary-revision',value);}
+function selectScene(value){scene=value;selectionInitialized=true;sessionStorage.setItem('canary-scene',scene);document.querySelectorAll('[data-scene]').forEach(b=>b.classList.toggle('selected',b.dataset.scene===scene));text($('#scene-question'),stories[scene][0]);text($('#scene-description'),stories[scene][1]);selectRevision(scene==='retry'?'v3':'v2');}
 document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;sessionStorage.setItem('canary-tab',tab);document.querySelectorAll('.tab').forEach(p=>p.classList.toggle('active',p.id===tab));document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b===button));if(tab==='logs')logs();if(tab==='architecture'){if(!window.canaryDiagramsLoaded){window.canaryDiagramsLoaded=true;const script=document.createElement('script');script.src='/diagrams.js'+new URL(import.meta.url).search;document.body.append(script);}else document.dispatchEvent(new Event('canary-diagrams-visible'));}}));
 document.querySelectorAll('[data-scene]').forEach(b=>b.addEventListener('click',()=>selectScene(b.dataset.scene)));
 function investigate(){if(!canInvestigate)return;return action(async()=>{const result=await api(`/evaluate?scene=${scene}&profile=${$('#profile').value}&revision=${$('#revision').value}`,'POST');if(faultUntil){faultInvestigationAt=Date.now();sessionStorage.setItem('canary-fault-investigated-at',String(faultInvestigationAt));}return result;});}
 $('#evaluate').addEventListener('click',investigate);$('#profile').addEventListener('change',render);
-$('#revision').addEventListener('change',render);
+$('#revision').addEventListener('change',()=>{selectRevision($('#revision').value);render();});
 $('#release').addEventListener('click',async()=>{
  if(releasing)return;
  releasing=true;render();$('#release-result').hidden=false;text($('#release-result'),'Committing release to Git…');
- try{const result=await api('/release/'+$('#revision').value,'POST');const link=document.createElement('a');link.href=result.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=result.sha.slice(0,8);$('#release-result').replaceChildren(document.createTextNode(result.version+' committed: '),link,document.createTextNode(result.refreshRequested==='true'?'. Immediate Argo CD refresh requested. Waiting for the new rollout; investigate after the canary is sampled.':result.refreshRequested==='false'?'. Git commit succeeded, but immediate Argo CD refresh was unavailable. Automatic reconciliation may take a few minutes; do not release again just to refresh.':'. Waiting for Argo CD. Run an investigation after the canary is sampled.'));stateGeneration++;state.latest={};state.releaseIntent={version:result.version,releasedAt:result.releasedAt};progressReceivedAt=0;lastCluster=0;render();await poll();}
+ try{const result=await api('/release/'+$('#revision').value,'POST');if(result.version==='v1'){selectScene('healthy');selectRevision('v1');}const link=document.createElement('a');link.href=result.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=result.sha.slice(0,8);$('#release-result').replaceChildren(document.createTextNode(result.version+' committed: '),link,document.createTextNode(result.refreshRequested==='true'?'. Immediate Argo CD refresh requested. Waiting for the new rollout; investigate after the canary is sampled.':result.refreshRequested==='false'?'. Git commit succeeded, but immediate Argo CD refresh was unavailable. Automatic reconciliation may take a few minutes; do not release again just to refresh.':'. Waiting for Argo CD. Run an investigation after the canary is sampled.'));if(result.version==='v1')$('#release-result').append(document.createTextNode(' Healthy release selected for v1 baseline recovery; run fresh investigations at the 10% and 50% gates.'));stateGeneration++;state.latest={};state.releaseIntent={version:result.version,releasedAt:result.releasedAt};progressReceivedAt=0;lastCluster=0;render();await poll();}
  catch(e){text($('#release-result'),e.message);}finally{releasing=false;render();}
 });
 $('#approve').addEventListener('click',()=>action(()=>api('/evaluations/'+state.latest.id+'/approve','POST')));
@@ -279,7 +280,7 @@ $('#connect').addEventListener('click',()=>$('#access-dialog').showModal());$('#
 $('#demo-mode').addEventListener('change',()=>{sessionStorage.setItem('canary-demo-mode',$('#demo-mode').value);const extended=$('#demo-mode').value==='extended';document.querySelectorAll('.extended').forEach(el=>el.hidden=!extended);if(!extended&&scene==='missing')selectScene('healthy');});
 $('#reset').addEventListener('click',()=>action(async()=>{
  const result=await api('/reset','POST');faultUntil=0;faultMessage='';sessionStorage.removeItem('canary-fault-until');renderFault();stateGeneration++;state.latest={};clusterView=null;progressView=null;progressReceivedAt=0;lastCluster=0;
- selectScene('healthy');$('#revision').value='v1';$('#profile').value='development';paused=false;
+ selectScene('healthy');selectRevision('v1');$('#profile').value='development';paused=false;
  text($('#pause-logs'),'Pause updates');$('#release-result').hidden=false;
  text($('#release-result'),result.message||'Reset requested v1 through Git. Wait for canary observations, then run Development investigations at each analysis stage.');
 }));
@@ -289,6 +290,8 @@ async function logs(){if(tab!=='logs'||paused)return;const source=$('#log-source
 $('#log-source').addEventListener('change',logs);
 window.addEventListener('hashchange',()=>{const value=consumeAccess();if(!value)return;token=value;sessionStorage.setItem('canary-token',token);if($('#access-dialog').open)$('#access-dialog').close();poll();});
 if(sessionStorage.getItem('canary-demo-mode')==='extended'){$('#demo-mode').value='extended';$('#demo-mode').dispatchEvent(new Event('change'));}
+const savedRevision=sessionStorage.getItem('canary-revision');
 const savedScene=sessionStorage.getItem('canary-scene');if(Object.hasOwn(stories,savedScene)&&!(savedScene==='missing'&&$('#demo-mode').value!=='extended'))selectScene(savedScene);
+if(['v1','v2','v3'].includes(savedRevision)){selectRevision(savedRevision);selectionInitialized=true;}
 const savedTab=sessionStorage.getItem('canary-tab');const savedButton=[...document.querySelectorAll('[data-tab]')].find(button=>button.dataset.tab===savedTab);if(savedButton)savedButton.click();
 agentCards();poll();setInterval(poll,2000);setInterval(logs,4000);setInterval(pollProgress,4000);

@@ -262,3 +262,7 @@ You can explain why a shared slowdown initially calls for HOLD, why successful r
 </div>
 
 Continue to [govern the decision](04-govern.md).
+
+### Returning to v1 after the scenarios
+
+Use **Reset demo to v1** to clear the fault and presentation state and select Healthy release with Development policy. Alternatively, a successful **Release selected version through Git → v1** now selects Healthy release automatically, preventing the previous Missing evidence scenario from withholding traces during baseline recovery. The selected candidate persists across browser reloads. A normal Git release preserves your policy selection; choose Development / no approval for baseline recovery. Investigate once the v1 candidate is ready at 10%, then again at 50%. These are fresh safety gates, not an automatic bypass.

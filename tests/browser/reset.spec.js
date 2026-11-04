@@ -25,7 +25,7 @@ test('reset clears the old verdict, metrics, approvals and evidence and persists
  await expect(page.locator('#revision')).toHaveValue('v1');await expect(page.locator('#profile')).toHaveValue('development');
  await expect(page.locator('#approve')).toBeHidden();
  await page.getByRole('button',{name:'Evidence explorer'}).click();await expect(page.locator('#evidence-content')).not.toContainText('previous-v2');
- await page.reload();await expect(page.locator('#effective-verdict')).toHaveText('Awaiting investigation');expect(resets).toBe(1);
+ await page.reload();await expect(page.locator('#effective-verdict')).toHaveText('Awaiting investigation');await expect(page.locator('#revision')).toHaveValue('v1');expect(resets).toBe(1);
 });
 
 for(const mismatch of ['release','stage','expired'])test(`${mismatch} changes invalidate the current verdict while retaining historical evidence`,async({page})=>{

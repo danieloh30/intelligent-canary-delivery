@@ -48,3 +48,17 @@ for(const refreshed of [true,false])test(`Git release reports immediate refresh 
  if(!refreshed)await expect(page.locator('#release-result')).toContainText('do not release again just to refresh');
  expect(posts).toBe(1);
 });
+
+test('successful v1 release leaves Missing evidence and retains v1 on reload',async({page})=>{
+ await page.route('**/api/state',r=>r.fulfill({json:{mode:'live',clusterEnabled:false,releaseEnabled:true,latest:{},events:[]}}));
+ await page.route('**/api/release/v1',r=>r.fulfill({json:{version:'v1',sha:'abc123456789',url:'https://github.com/demo/repo/commit/abc123',refreshRequested:'true'}}));
+ await page.goto('/');await page.locator('#demo-mode').selectOption('extended');await page.locator('[data-scene="missing"]').click();await page.locator('#revision').selectOption('v1');await page.locator('#release').click();
+ await expect(page.locator('[data-scene="healthy"]')).toHaveClass(/selected/);await expect(page.locator('#revision')).toHaveValue('v1');await expect(page.locator('#release-result')).toContainText('Healthy release selected for v1 baseline recovery');
+ await page.reload();await expect(page.locator('[data-scene="healthy"]')).toHaveClass(/selected/);await expect(page.locator('#revision')).toHaveValue('v1');
+ let request;await page.route('**/api/evaluate?*',r=>{request=r.request().url();return r.fulfill({json:{id:'v1-recovery'}});});await page.locator('#evaluate').click();expect(request).toContain('scene=healthy');expect(request).toContain('revision=v1');
+});
+test('failed v1 release preserves the chosen scenario and candidate for retry',async({page})=>{
+ await page.route('**/api/state',r=>r.fulfill({json:{mode:'live',clusterEnabled:false,releaseEnabled:true,latest:{},events:[]}}));await page.route('**/api/release/v1',r=>r.fulfill({status:409,body:'Git changed'}));
+ await page.goto('/');await page.locator('#demo-mode').selectOption('extended');await page.locator('[data-scene="missing"]').click();await page.locator('#revision').selectOption('v1');await page.locator('#release').click();
+ await expect(page.locator('#release-result')).toContainText('Git changed');await expect(page.locator('[data-scene="missing"]')).toHaveClass(/selected/);await expect(page.locator('#revision')).toHaveValue('v1');
+});
