@@ -44,3 +44,16 @@ test('colored labels fit a mobile viewport',async({page})=>{
  await page.goto('/');await expect(page.locator('#rollout-phase')).toHaveText('Rollout: Progressing');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
 });
+
+
+test('basic limits prominently explain the 95th percentile and omit event branding',async({page})=>{
+ await page.route('**/api/state',r=>r.fulfill({json:{mode:'fixture',clusterEnabled:false,latest:{},events:[]}}));
+ await page.goto('/');
+ await expect(page.locator('#safety-limits')).toContainText('PASS REQUIRES BOTH');
+ await expect(page.locator('.safety-limit b')).toHaveText(['≤ 1%','≤ 500 ms']);
+ await expect(page.locator('#safety-limits')).toContainText('p95 = 95th percentile');
+ await expect(page.locator('#safety-limits')).toContainText('at least 95%');await expect(page.locator('#safety-limits')).toContainText('half a second');
+ await expect(page.locator('footer')).not.toContainText('KUBEAUTO DAY 2026');
+ await page.locator('.comparison').screenshot({path:'/tmp/canary-safety-limits.png'});
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
+});

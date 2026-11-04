@@ -162,6 +162,8 @@ Release changes immediately invalidate the previous current result. The overview
 
 The dashboard uses versioned application assets and explicit no-store headers for its mutable HTML, scripts, styles, and diagrams. This avoids mixing new HTML with JavaScript/CSS previously cached as immutable for 24 hours. After an upgrade, reload the page once; the versioned URLs bypass legacy asset entries. The policy selector and single investigation action share one readiness area: choose Development / no approval for the core flow, or Production / approval before a fresh investigation for HITL.
 
+The Basic static check prominently displays both pass limits: error rate ≤ 1% and p95 latency ≤ 500 ms. The SPA defines p95 as the 95th percentile: at least 95% of observed requests complete within that latency; up to 5% take longer. The 500 ms limit means at least 95% complete within half a second.
+
 ### Follow rollout progress in the SPA
 
 **Release overview → Release progress** displays the configured stage sequence, active canary target, AnalysisRun phase, and completed/configured analysis checks. Live **Stable requests** and **Canary requests** counts cover a rolling 60-second window and refresh every four seconds before any agent investigation. The percentage is a replica-based target, not a measured request share. Starting a new release immediately clears previous stage highlights and shows Waiting for GitOps reconciliation. Stage colors resume from current observations after Argo CD applies the commit and Argo Rollouts observes the new manifest; this also applies when releasing v2 again.

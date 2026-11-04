@@ -133,7 +133,7 @@ A release starts GitOps reconciliation. The four Java agents start when you sele
 
 The agents execute in one Quarkus service: Metrics Analyst first, Dependency Investigator and Release Analyst concurrently, then Canary Decision Agent. Tool reads appear during execution; specialist findings are published when the workflow completes. These views expose recorded activity and structured outputs, not private model reasoning.
 
-Both revisions should show increased inventory latency. The basic static check fails while the agents investigate whether the candidate caused the change.
+Both revisions should show increased inventory latency. The basic static check fails while the agents investigate whether the candidate caused the change. In the highlighted **PASS REQUIRES BOTH** panel, the limits are **error rate ≤ 1%** and **p95 latency ≤ 500 ms**. p95 means the 95th percentile: at least 95% of observed requests finish within that latency, and up to 5% take longer. At this limit, at least 95% must finish within half a second.
 
 During the affected-window wait, switch to the prepared Prometheus tab and compare success, mean latency, and dependency attempts across release/revision labels. Use the [copyable observability queries](../reference/observability.md); Prometheus mean latency and the SPA p95 are different statistics.
 
