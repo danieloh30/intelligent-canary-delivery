@@ -48,7 +48,7 @@ test('retry-budget phrases and numeric stable/canary contrast are highlighted sa
  await setup(page,e);await page.goto('/');await page.getByRole('button',{name:'Evidence explorer'}).click();
  const view=page.locator('#evidence-content');await expect(view.locator('.evidence-decision mark')).toHaveText(['retry budget with 5 attempts per checkout','only 1 attempt per checkout','Retry safety budget exceeded','canary 5.0 attempts per checkout versus stable 1.0','more than 2 attempts and more than twice stable']);
  await expect(view.locator('.retry-budget-row mark')).toHaveText(['1.00×','5.00×']);await expect(view.locator('.retry-budget-row')).toContainText('Corroborating requests and logs are required');
- await page.locator('.evidence-decision').screenshot({path:'/private/tmp/canary-retry-highlights.png'});
+ await page.locator('.evidence-decision').screenshot({path:test.info().outputPath('canary-retry-highlights.png')});
 });
 test('execution diagnostics explain incomplete agents instead of inventing an evidence shortage',async({page})=>{
  const e=evaluation();e.status='FAILED';e.recommendation.summary='Agent execution failed: An agent response could not be parsed';e.decision.reason=e.recommendation.summary;
