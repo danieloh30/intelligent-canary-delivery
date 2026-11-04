@@ -13,7 +13,7 @@ public class RolloutProgressService {
     public record Stage(int weight,String state) {}
     public record Progress(boolean connected,String state,String message,String phase,String revision,String podHash,
             int stepIndex,int targetWeight,String pauseDuration,String analysisName,String analysisPhase,
-            int checksCompleted,int checksTotal,String interval,Instant capturedAt,long stableRequests,long canaryRequests,
+            int checksCompleted,int checksTotal,String interval,Instant capturedAt,long stableRequests,long canaryRequests,double stableP95Ms,double canaryP95Ms,
             boolean samplesAvailable,boolean ready,List<String> missing,List<Stage> stages) {}
     @Inject ClusterService cluster;
     @Inject EvidenceCollector collector;
@@ -32,7 +32,7 @@ public class RolloutProgressService {
         return cached;
     }
     private Progress unavailable(boolean connected,String state,String message) {
-        return new Progress(connected,state,message,"","","",-1,0,"","","",0,0,"",Instant.now(),0,0,false,false,List.of(),List.of());
+        return new Progress(connected,state,message,"","","",-1,0,"","","",0,0,"",Instant.now(),0,0,0,0,false,false,List.of(),List.of());
     }
     private Progress read() {
         var resource=cluster.rollout();
@@ -56,7 +56,7 @@ public class RolloutProgressService {
             &&tree.at("/status/observedGeneration").asLong()<resource.getMetadata().getGeneration();
         if(pending||controllerPending)return new Progress(true,"RECONCILING",
             pending?"Release committed to Git. Waiting for Argo CD to apply the new candidate.":"New manifest applied. Waiting for Argo Rollouts to observe this release.",
-            phase,revision,hash,index,0,"","","",0,0,"",Instant.now(),0,0,false,false,List.of(),stages(steps,-1,true,false,false));
+            phase,revision,hash,index,0,"","","",0,0,"",Instant.now(),0,0,0,0,false,false,List.of(),stages(steps,-1,true,false,false));
         JsonNode current=index>=0&&index<steps.size()?steps.get(index):cluster.mapper().createObjectNode();
         String pause=current.has("pause")?current.path("pause").path("duration").asText():current.has("analysis")&&index>0?steps.get(index-1).path("pause").path("duration").asText():"";
         String analysisName="",analysisPhase="",interval="";int checks=0,total=0;
@@ -119,7 +119,7 @@ public class RolloutProgressService {
             }
         }
         return new Progress(true,state,message,phase,revision,hash,index,weight,pause,analysisName,analysisPhase,checks,total,interval,
-            Instant.now(),stableCount,canaryCount,evidence!=null,ready,List.copyOf(missing),stages(steps,index,baseline,complete,failed));
+            Instant.now(),stableCount,canaryCount,evidence==null?0:evidence.stable().p95Ms(),evidence==null?0:evidence.canary().p95Ms(),evidence!=null,ready,List.copyOf(missing),stages(steps,index,baseline,complete,failed));
     }
     static boolean pending(String requested,String actual) {
         if(requested.equals(actual))return false;

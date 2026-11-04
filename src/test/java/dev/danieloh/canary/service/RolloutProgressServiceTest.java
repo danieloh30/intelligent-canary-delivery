@@ -52,7 +52,7 @@ class RolloutProgressServiceTest {
         public void close(){cluster.client.close();server.stop(0);}
     }
     @Test void readyRequiresAnActiveAnalysisAndBothCohortsAtThirty() throws Exception {
-        try(var s=new Setup(2,"Running")){var p=s.service.snapshot();assertTrue(p.ready());assertEquals("READY",p.state());assertEquals(10,p.targetWeight());assertEquals(30,p.stableRequests());assertEquals(180,p.checksTotal());assertEquals(12,p.checksCompleted());assertEquals("5s",p.interval());assertEquals("15s",p.pauseDuration());assertEquals(List.of("active","pending","pending"),p.stages().stream().map(RolloutProgressService.Stage::state).toList());assertNull(s.service.store.latest());assertTrue(s.service.store.events().isEmpty());assertSame(p,s.service.snapshot());assertEquals(1,s.collector.calls);}
+        try(var s=new Setup(2,"Running")){var p=s.service.snapshot();assertTrue(p.ready());assertEquals("READY",p.state());assertEquals(10,p.targetWeight());assertEquals(30,p.stableRequests());assertEquals(5,p.stableP95Ms());assertEquals(5,p.canaryP95Ms());assertEquals(180,p.checksTotal());assertEquals(12,p.checksCompleted());assertEquals("5s",p.interval());assertEquals("15s",p.pauseDuration());assertEquals(List.of("active","pending","pending"),p.stages().stream().map(RolloutProgressService.Stage::state).toList());assertNull(s.service.store.latest());assertTrue(s.service.store.events().isEmpty());assertSame(p,s.service.snapshot());assertEquals(1,s.collector.calls);}
         try(var s=new Setup(2,"Running")){s.collector.stable=29;assertFalse(s.service.snapshot().ready());}
         try(var s=new Setup(2,"Running")){s.collector.canary=29;assertFalse(s.service.snapshot().ready());}
     }

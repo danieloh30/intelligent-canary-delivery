@@ -1,10 +1,10 @@
 import {test,expect} from 'playwright/test';
 
 async function setup(page,{step=2,weight=10,state='READY',ready=true,stable=40,canary=35}={}){
- const data={step,weight,state,ready,stable,canary,phase:'Progressing',latest:{},checks:12,analysis:'Running',missing:[],offline:false,stale:false,posts:[]};
+ const data={step,weight,state,ready,stable,canary,phase:'Progressing',latest:{},checks:12,analysis:'Running',missing:[],offline:false,stale:false,posts:[],stableLatency:4,canaryLatency:5};
  await page.route('**/api/state',r=>r.fulfill({json:{mode:'live',clusterEnabled:true,releaseEnabled:true,resetEnabled:true,latest:data.latest,releaseIntent:data.intent,events:[]}}));
  await page.route('**/api/cluster',r=>r.fulfill({json:{connected:true,stableVersion:'v1',candidateVersion:'v2',rollout:{spec:{template:{metadata:{annotations:{'demo.canary/released-at':data.actualRelease}}}},status:{phase:data.phase,currentPodHash:'candidate',stableRS:'stable',currentStepIndex:data.step}}}}));
- await page.route('**/api/progress',r=>r.fulfill({json:{connected:!data.offline,state:data.offline?'UNAVAILABLE':data.state,message:data.offline?'Cannot read live progress.':data.state==='WARMUP'?'The 15s warm-up is before the analysis gate; no click is needed during the pause.':data.state==='COLLECTING'?'Collect at least 30 observations for BOTH stable and canary.':data.state==='INCONCLUSIVE'?'This analysis has finished Inconclusive. Request a fresh release.':'The analysis gate is waiting for your decision.',phase:data.phase,revision:'v2',podHash:'candidate',stepIndex:data.step,targetWeight:data.weight,pauseDuration:'15s',analysisName:data.state==='WARMUP'?'':'analysis-current',analysisPhase:data.analysis,checksCompleted:data.checks,checksTotal:180,interval:'5s',capturedAt:new Date(Date.now()-(data.stale?20000:0)).toISOString(),stableRequests:data.stable,canaryRequests:data.canary,samplesAvailable:true,ready:data.ready,missing:data.missing,stages:data.stages||[{weight:10,state:data.weight===10?'active':'complete'},{weight:50,state:data.weight===50?'active':'pending'},{weight:100,state:'pending'}]}}));
+ await page.route('**/api/progress',r=>r.fulfill({json:{connected:!data.offline,state:data.offline?'UNAVAILABLE':data.state,message:data.offline?'Cannot read live progress.':data.state==='WARMUP'?'The 15s warm-up is before the analysis gate; no click is needed during the pause.':data.state==='COLLECTING'?'Collect at least 30 observations for BOTH stable and canary.':data.state==='INCONCLUSIVE'?'This analysis has finished Inconclusive. Request a fresh release.':'The analysis gate is waiting for your decision.',phase:data.phase,revision:'v2',podHash:'candidate',stepIndex:data.step,targetWeight:data.weight,pauseDuration:'15s',analysisName:data.state==='WARMUP'?'':'analysis-current',analysisPhase:data.analysis,checksCompleted:data.checks,checksTotal:180,interval:'5s',capturedAt:data.captureAt||new Date(Date.now()-(data.stale?20000:0)).toISOString(),stableRequests:data.stable,canaryRequests:data.canary,stableP95Ms:data.stableLatency,canaryP95Ms:data.canaryLatency,samplesAvailable:true,ready:data.ready,missing:data.missing,stages:data.stages||[{weight:10,state:data.weight===10?'active':'complete'},{weight:50,state:data.weight===50?'active':'pending'},{weight:100,state:'pending'}]}}));
  await page.route('**/api/evaluate?*',r=>{data.posts.push(r.request().url());data.latest={status:'RUNNING'};return r.fulfill({json:{id:'new-investigation',status:'RUNNING'}});});
  return data;
 }
@@ -106,4 +106,28 @@ test('a repeated v2 release immediately clears completed stages until GitOps obs
  await expect(page.locator('#progress-title')).toHaveText('Ready to investigate · 10% canary',{timeout:12000});
  await expect(page.locator('#rollout-stages .active')).toHaveText('10% canary');
  await expect(page.locator('#evaluate')).toBeEnabled();
+});
+
+
+test('shared slowdown waits for affected evidence in both cohorts before enabling investigation',async({page})=>{
+ const d=await setup(page);d.canaryLatency=653;
+ await page.route('**/api/fault/25',r=>r.fulfill({json:{seconds:25}}));
+ await page.goto('/');await expect(page.locator('#evaluate')).toBeEnabled();await page.locator('#inject').click();
+ await expect(page.locator('#evaluate')).toHaveText('Waiting for slowdown evidence');await expect(page.locator('#evaluate')).toBeDisabled();
+ await expect(page.locator('#progress-message')).toContainText('BOTH stable and canary');await expect(page.locator('#stable-live-p95')).toHaveText('Live p95: 4.0 ms');
+ expect(d.posts).toHaveLength(0);d.stableLatency=651;
+ await expect(page.locator('#evaluate')).toBeEnabled({timeout:10000});await expect(page.locator('#progress-message')).toContainText('Shared slowdown observed');await expect(page.locator('#stable-live-p95')).toHaveText('Live p95: 651.0 ms');
+ await page.locator('#evaluate').click();expect(d.posts).toHaveLength(1);
+});
+test('clearing the fault allows a healthy recovery investigation instead of requiring slow metrics',async({page})=>{
+ await setup(page);await page.route('**/api/fault/*',r=>r.fulfill({json:{seconds:Number(r.request().url().split('/').pop())}}));
+ await page.goto('/');await page.locator('#inject').click();await expect(page.locator('#evaluate')).toBeDisabled();
+ await page.locator('#clear').click();await expect(page.locator('#evaluate')).toBeEnabled();
+});
+
+test('an expired fault without representative evidence stays explicit and old browser markers do not block later releases',async({page})=>{
+ const d=await setup(page);const start=Date.now();await page.clock.install({time:new Date(start)});await page.route('**/api/fault/25',r=>r.fulfill({json:{seconds:25}}));
+ await page.goto('/');await page.locator('#inject').click();await expect(page.locator('#fault-result')).toHaveAttribute('data-state','active');await expect(page.locator('#evaluate')).toBeDisabled();
+ d.captureAt=new Date(start+27000).toISOString();await page.clock.fastForward(27000);await expect(page.locator('#progress-message')).toContainText('fault expired before both cohorts');await expect(page.locator('#evaluate')).toBeDisabled();
+ d.captureAt=new Date(start+87000).toISOString();await page.clock.fastForward(60000);await expect(page.locator('#evaluate')).toBeEnabled();
 });

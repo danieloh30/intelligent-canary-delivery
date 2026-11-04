@@ -123,7 +123,7 @@ In the UI:
 
 1. Choose **Shared slowdown** and candidate **v2**.
 2. Select **Inject 25s shared slowdown**. An amber confirmation shows that the shared inventory fault is active, adds 650 ms per call, and has about 25 seconds remaining. Let affected checkout requests appear before investigating. The status explains when the fault expires or is cleared; affected requests remain in the rolling 60-second evidence window. A failed injection displays an error beside the button.
-3. Select **Development / no approval** policy. Once Release progress shows the green **Ready to investigate** cue, select **Investigate v2 at 10%**.
+3. Select **Development / no approval** policy. After injection, the button shows **Waiting for slowdown evidence** until a fresh read shows p95 above 500 ms in **both** stable and canary, alongside at least 30 requests per cohort. Watch the new live p95 values beside the sample counts. Investigating immediately can capture an uneven window: a few slow canary requests may raise its p95 while the larger stable cohort still has a normal p95, making the release appear responsible. Once the green cue confirms **Shared slowdown observed**, select **Investigate v2 at 10%**. If the fault expires before both cohorts show it, re-inject or clear it to investigate recovery.
 
 ### Watch the Quarkus Java agents in the SPA
 
@@ -144,7 +144,7 @@ Both revisions should show increased inventory latency. The basic static check f
 
 During the affected-window wait, switch to the prepared Prometheus tab and compare success, mean latency, and dependency attempts across release/revision labels. Use the [copyable observability queries](../reference/observability.md); Prometheus mean latency and the SPA p95 are different statistics.
 
-The appropriate initial result is **HOLD**. A known dependency cause does not make ongoing customer degradation safe.
+The appropriate initial result for a represented shared slowdown is **HOLD**. Decision Policy explicitly withholds promotion when both p95 values exceed 500 ms, canary p95 is at most 20% above stable, and canary errors and attempts per checkout do not exceed stable. This is a documented demo heuristic, not proof of root cause. The original model recommendation remains visible even if the policy changes NO-GO to effective HOLD. Candidate-specific retries, increased errors, materially worse latency, and the hard error cap remain rejectable. A known dependency cause does not make ongoing customer degradation safe.
 
 ### Enterprise context: avoid incorrect release attribution
 

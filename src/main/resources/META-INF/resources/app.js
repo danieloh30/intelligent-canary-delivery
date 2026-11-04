@@ -58,12 +58,17 @@ function renderProgress(){
  let kind=!state.clusterEnabled?'OFFLINE':pending||releasing?'RECONCILING':p&&p.connected===false?'UNAVAILABLE':stale||!coherent?'REFRESHING':p.state;
  const selected=p&&$('#revision').value===p.revision;
  if(['READY','HOLD'].includes(kind)&&!selected)kind='SELECT_CANDIDATE';
+ const faultStarted=faultUntil?faultUntil-25000:0;
+ const faultEvaluated=faultStarted&&(faultInvestigationAt>=faultStarted||Date.parse(state.latest?.evidence?.capturedAt||'')>=faultStarted);
+ const sharedFaultSampled=p?.samplesAvailable&&Date.parse(p.capturedAt)>=faultStarted&&p.stableP95Ms>500&&p.canaryP95Ms>500;
+ if(['READY','HOLD'].includes(kind)&&faultBusy)kind='FAULT_APPLYING';
+ else if(['READY','HOLD'].includes(kind)&&faultStarted&&Date.now()-faultStarted<=85000&&!faultEvaluated&&!sharedFaultSampled)kind='FAULT_SAMPLING';
  if(state.latest?.status==='RUNNING'&&evidenceCurrent(state.latest))kind='INVESTIGATING';
- const titles={OFFLINE:'Offline rehearsal',RECONCILING:'Waiting for GitOps reconciliation',REFRESHING:'Refreshing rollout progress',BASELINE:'Baseline ready',COMPLETE:'Release fully promoted',WARMUP:'Warm-up before analysis',COLLECTING:'Waiting for analysis readiness',READY:'Ready to investigate',INVESTIGATING:'Java agents are investigating',ADVANCING:'Waiting for Argo to advance',HOLD:'HOLD — investigate again after recovery',APPROVAL:'Presenter approval required',FAILED:'Rollout blocked',INCONCLUSIVE:'Analysis finished — fresh release required',UNAVAILABLE:'Live progress unavailable',SELECT_CANDIDATE:'Select the active candidate'};
+ const titles={FAULT_APPLYING:'Applying dependency fault',FAULT_SAMPLING:'Waiting for shared slowdown evidence',OFFLINE:'Offline rehearsal',RECONCILING:'Waiting for GitOps reconciliation',REFRESHING:'Refreshing rollout progress',BASELINE:'Baseline ready',COMPLETE:'Release fully promoted',WARMUP:'Warm-up before analysis',COLLECTING:'Waiting for analysis readiness',READY:'Ready to investigate',INVESTIGATING:'Java agents are investigating',ADVANCING:'Waiting for Argo to advance',HOLD:'HOLD — investigate again after recovery',APPROVAL:'Presenter approval required',FAILED:'Rollout blocked',INCONCLUSIVE:'Analysis finished — fresh release required',UNAVAILABLE:'Live progress unavailable',SELECT_CANDIDATE:'Select the active candidate'};
  const suffix=p?.targetWeight&&!['BASELINE','COMPLETE','OFFLINE','RECONCILING','REFRESHING'].includes(kind)?` · ${p.targetWeight}% canary`:'';
  text($('#progress-title'),(titles[kind]||'Waiting for live progress')+suffix);
- text($('#progress-message'),kind==='OFFLINE'?'Rehearsal investigations use fixture or offline evidence; they do not advance a rollout.':kind==='RECONCILING'?'The release is committed. Wait here while Argo CD applies it.':kind==='REFRESHING'?'Waiting for a fresh snapshot of the current rollout stage.':kind==='SELECT_CANDIDATE'?`Choose candidate ${p.revision} below to investigate this stage.`:p?.message||'Live rollout progress is unavailable.');
- $('#investigation-cue').dataset.state=['READY'].includes(kind)?'ready':['FAILED','INCONCLUSIVE'].includes(kind)?'danger':['WARMUP','COLLECTING','HOLD','APPROVAL','SELECT_CANDIDATE'].includes(kind)?'waiting':'neutral';
+ text($('#progress-message'),kind==='FAULT_APPLYING'?'Waiting for confirmation that inventory accepted the fault.':kind==='FAULT_SAMPLING'?(Date.now()<faultUntil?'Wait for a fresh window showing p95 above 500 ms in BOTH stable and canary before investigating this controlled shared slowdown.':'The fault expired before both cohorts showed elevated p95. Re-inject to demonstrate shared slowdown, or clear the fault to investigate healthy recovery.'):kind==='READY'&&faultStarted&&!faultEvaluated&&sharedFaultSampled?'Shared slowdown observed: both stable and canary p95 exceed 500 ms. Investigate this affected window now.':kind==='OFFLINE'?'Rehearsal investigations use fixture or offline evidence; they do not advance a rollout.':kind==='RECONCILING'?'The release is committed. Wait here while Argo CD applies it.':kind==='REFRESHING'?'Waiting for a fresh snapshot of the current rollout stage.':kind==='SELECT_CANDIDATE'?`Choose candidate ${p.revision} below to investigate this stage.`:p?.message||'Live rollout progress is unavailable.');
+ $('#investigation-cue').dataset.state=['READY'].includes(kind)?'ready':['FAILED','INCONCLUSIVE'].includes(kind)?'danger':['FAULT_APPLYING','FAULT_SAMPLING','WARMUP','COLLECTING','HOLD','APPROVAL','SELECT_CANDIDATE'].includes(kind)?'waiting':'neutral';
  const list=$('#rollout-stages');list.replaceChildren();
  if(p?.stages?.length){
  const resetStages=['RECONCILING','REFRESHING','UNAVAILABLE'].includes(kind);
@@ -74,7 +79,7 @@ function renderProgress(){
  if(state.clusterEnabled&&!stale&&coherent&&!pending&&!releasing){$('#traffic-weight').style.width=(p.state==='BASELINE'?0:p.targetWeight)+'%';text($('#traffic-caption'),p.state==='BASELINE'?'Stable baseline · no active candidate':p.state==='COMPLETE'?'Rollout complete · candidate is now stable':`Target: ${p.targetWeight}% canary · replica-based, approximate request share`);}
  const samples=state.clusterEnabled&&!stale&&coherent&&!pending&&!releasing&&p?.samplesAvailable;
  $('#live-samples').hidden=!samples;
- if(samples){for(const [id,count] of [['stable-samples',p.stableRequests],['canary-samples',p.canaryRequests]]){text($('#'+id),Number(count).toLocaleString());$('#'+id).className=count>=30?'good':'hold';}text($('#sample-window'),'Live rolling 60-second window · read '+new Date(p.capturedAt).toLocaleTimeString());}
+ if(samples){for(const [id,count] of [['stable-samples',p.stableRequests],['canary-samples',p.canaryRequests]]){text($('#'+id),Number(count).toLocaleString());$('#'+id).className=count>=30?'good':'hold';}for(const [id,value]of [['stable-live-p95',p.stableP95Ms],['canary-live-p95',p.canaryP95Ms]])text($('#'+id),Number.isFinite(value)?`Live p95: ${value.toFixed(1)} ms`:'Live p95 unavailable');text($('#sample-window'),'Live rolling 60-second window · read '+new Date(p.capturedAt).toLocaleTimeString());}
  text($('#progress-source'),state.clusterEnabled?'Live cluster · refresh every 4s':'Offline rehearsal');
  text($('#analysis-status'),p?.analysisName&&!stale&&coherent&&!pending&&!releasing?`Analysis ${p.analysisPhase} · ${p.checksCompleted} / ${p.checksTotal||'unbounded'} checks · ${p.interval||'configured'} interval · ${p.analysisName}`:'');
  const intervalMatch=/^(\d+)(s|m|h)$/.exec(p?.interval||'');
@@ -85,7 +90,7 @@ function renderProgress(){
  const eligible=state.clusterEnabled?!stale&&coherent&&!pending&&p?.connected&&['READY','HOLD'].includes(kind)&&!!p?.ready&&selected:true;
  canInvestigate=eligible&&!busy&&!releasing&&state.latest?.status!=='RUNNING';
  $('#evaluate').disabled=!canInvestigate;
- const waitingLabels={BASELINE:'Release a candidate first',COMPLETE:'Release a new candidate',WARMUP:'Warm-up in progress',COLLECTING:'Waiting for samples',REFRESHING:'Refreshing progress',UNAVAILABLE:'Progress unavailable',RECONCILING:'Waiting for Argo CD',INVESTIGATING:'Agents are running',ADVANCING:'Waiting for next stage',APPROVAL:'Approval required below',INCONCLUSIVE:'Start a fresh release',FAILED:'Review rollout outcome',SELECT_CANDIDATE:'Select the active candidate'};
+ const waitingLabels={FAULT_APPLYING:'Applying slowdown…',FAULT_SAMPLING:'Waiting for slowdown evidence',BASELINE:'Release a candidate first',COMPLETE:'Release a new candidate',WARMUP:'Warm-up in progress',COLLECTING:'Waiting for samples',REFRESHING:'Refreshing progress',UNAVAILABLE:'Progress unavailable',RECONCILING:'Waiting for Argo CD',INVESTIGATING:'Agents are running',ADVANCING:'Waiting for next stage',APPROVAL:'Approval required below',INCONCLUSIVE:'Start a fresh release',FAILED:'Review rollout outcome',SELECT_CANDIDATE:'Select the active candidate'};
  text($('#evaluate'),!state.clusterEnabled?'Run investigation':canInvestigate&&p?`Investigate ${p.revision} at ${p.targetWeight}%`:(waitingLabels[kind]||'Waiting for stage readiness'));
  text($('#policy-help'),$('#profile').value==='production'?'Production: eligible GO requires human approval. Applies to your next investigation; existing decisions are unchanged.':'Development: eligible GO needs no approval. Applies to your next investigation; starting agents is still manual.');
  $('#evaluate').classList.toggle('investigation-ready',state.clusterEnabled&&canInvestigate);
@@ -220,7 +225,7 @@ async function action(fn){busy=true;$('#evaluate').disabled=true;try{await fn();
 function selectScene(value){scene=value;selectionInitialized=true;sessionStorage.setItem('canary-scene',scene);document.querySelectorAll('[data-scene]').forEach(b=>b.classList.toggle('selected',b.dataset.scene===scene));text($('#scene-question'),stories[scene][0]);text($('#scene-description'),stories[scene][1]);$('#revision').value=scene==='retry'?'v3':'v2';}
 document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;sessionStorage.setItem('canary-tab',tab);document.querySelectorAll('.tab').forEach(p=>p.classList.toggle('active',p.id===tab));document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b===button));if(tab==='logs')logs();if(tab==='architecture'){if(!window.canaryDiagramsLoaded){window.canaryDiagramsLoaded=true;const script=document.createElement('script');script.src='/diagrams.js'+new URL(import.meta.url).search;document.body.append(script);}else document.dispatchEvent(new Event('canary-diagrams-visible'));}}));
 document.querySelectorAll('[data-scene]').forEach(b=>b.addEventListener('click',()=>selectScene(b.dataset.scene)));
-function investigate(){if(!canInvestigate)return;return action(()=>api(`/evaluate?scene=${scene}&profile=${$('#profile').value}&revision=${$('#revision').value}`,'POST'));}
+function investigate(){if(!canInvestigate)return;return action(async()=>{const result=await api(`/evaluate?scene=${scene}&profile=${$('#profile').value}&revision=${$('#revision').value}`,'POST');if(faultUntil){faultInvestigationAt=Date.now();sessionStorage.setItem('canary-fault-investigated-at',String(faultInvestigationAt));}return result;});}
 $('#evaluate').addEventListener('click',investigate);$('#profile').addEventListener('change',render);
 $('#revision').addEventListener('change',render);
 $('#release').addEventListener('click',async()=>{
@@ -230,21 +235,21 @@ $('#release').addEventListener('click',async()=>{
  catch(e){text($('#release-result'),e.message);}finally{releasing=false;render();}
 });
 $('#approve').addEventListener('click',()=>action(()=>api('/evaluations/'+state.latest.id+'/approve','POST')));
-let faultUntil=Number(sessionStorage.getItem('canary-fault-until')||0),faultMessage='',faultError=false,faultBusy=false;
+let faultUntil=Number(sessionStorage.getItem('canary-fault-until')||0),faultMessage='',faultError=false,faultBusy=false,faultInvestigationAt=Number(sessionStorage.getItem('canary-fault-investigated-at')||0);
 function renderFault(){
  const remaining=Math.max(0,Math.ceil((faultUntil-Date.now())/1000));
  const host=$('#fault-result');host.hidden=!faultUntil&&!faultMessage;
  host.dataset.state=faultError?'error':remaining?'active':'ended';
- text(host,remaining?`Shared slowdown active · about ${remaining}s remaining. Inventory adds 650 ms per call for both stable and canary. Allow affected requests to appear, then investigate at the ready gate.`:faultMessage||'Slowdown expired. Affected requests can remain in the 60-second observation window; investigate now to capture them, or wait for fresh healthy evidence to show recovery.');
+ text(host,remaining?`Shared slowdown active · about ${remaining}s remaining. Inventory adds 650 ms per call for both stable and canary. Allow affected requests to appear, then investigate at the ready gate.`:faultMessage||'Slowdown expired. Affected requests can remain in the 60-second observation window. Follow the readiness cue: re-inject if both cohorts were not captured, or clear the fault and wait for healthy recovery evidence.');
  $('#inject').classList.toggle('fault-active',remaining>0);
  text($('#inject'),faultBusy?'Updating dependency fault…':remaining?'Restart 25s shared slowdown':'Inject 25s shared slowdown');
  $('#inject').disabled=faultBusy;$('#clear').disabled=faultBusy;
 }
 async function setFault(seconds){
- if(faultBusy)return;faultBusy=true;renderFault();
+ if(faultBusy)return;faultBusy=true;renderFault();render();
  try{await api('/fault/'+seconds,'POST');faultUntil=seconds?Date.now()+seconds*1000:0;sessionStorage.setItem('canary-fault-until',String(faultUntil));faultError=false;faultMessage=seconds?'':'Dependency fault cleared. Allow affected requests to drain from the 60-second window before investigating recovery.';}
  catch(e){faultError=true;faultMessage='Could not update the dependency fault: '+e.message;faultUntil=0;sessionStorage.removeItem('canary-fault-until');}
- finally{faultBusy=false;renderFault();}
+ finally{faultBusy=false;renderFault();render();}
 }
 $('#inject').addEventListener('click',()=>setFault(25));$('#clear').addEventListener('click',()=>setFault(0));
 renderFault();setInterval(renderFault,1000);
