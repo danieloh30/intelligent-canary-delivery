@@ -131,3 +131,8 @@ test('an expired fault without representative evidence stays explicit and old br
  d.captureAt=new Date(start+27000).toISOString();await page.clock.fastForward(27000);await expect(page.locator('#progress-message')).toContainText('fault expired before both cohorts');await expect(page.locator('#evaluate')).toBeDisabled();
  d.captureAt=new Date(start+87000).toISOString();await page.clock.fastForward(60000);await expect(page.locator('#evaluate')).toBeEnabled();
 });
+
+test('failed agent execution has a distinct cue and permits retry at the same active gate',async({page})=>{
+ const d=await setup(page,{step:5,weight:50,state:'HOLD'});d.latest={id:'failed-agent',status:'FAILED',evidence:{id:'failed-agent',capturedAt:new Date().toISOString(),source:'LIVE_KUBERNETES_REQUESTS',revision:'v2',stableRevision:'stable',rolloutStep:5,canaryPodHash:'candidate',stable:{requests:900,errorRate:0,p95Ms:3,attemptsPerCheckout:1},canary:{requests:880,errorRate:0,p95Ms:6,attemptsPerCheckout:1},traces:[],logs:[],missing:[]},decision:{effective:'HOLD',reason:'Agent execution failed: An agent response could not be parsed',expiresAt:new Date(Date.now()+120000).toISOString()}};
+ await page.goto('/');await expect(page.locator('#progress-title')).toHaveText('Agent execution failed — retry this stage · 50% canary');await expect(page.locator('#progress-message')).toContainText('Waiting for traffic or clearing a dependency fault does not repair');await expect(page.locator('#evaluate')).toBeEnabled();
+});

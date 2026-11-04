@@ -213,3 +213,7 @@
 #evidence-content .decision-verdict-line{font-size:16px;font-weight:600;line-height:2.2;overflow-wrap:anywhere}.evidence-verdict{display:inline-block;padding:3px 12px;border:1px solid currentColor;border-radius:7px;background:#f4f7f8;font-size:20px;line-height:1.5}.evidence-verdict.bad{background:#fbe4df}.evidence-verdict.good{background:#e3f2e8}.evidence-verdict.hold{background:#fff3ce}
 
 .live-samples>div{flex-wrap:wrap}.live-samples .live-p95{flex-basis:100%;font-weight:600;color:#425e6b}
+
+.retry-budget-row{background:#fff8e6}.retry-budget-row td:nth-child(3) mark{color:#933a2e;background:#fbe2d9;font-weight:800}
+
+.evidence-gap-insight{margin:24px 0;padding:24px;background:#fff8e6;border:1px solid #dfc779;border-left:5px solid #9b7526;border-radius:8px}.evidence-gap-insight h3{margin:12px 0 20px}.evidence-gap-insight p{line-height:1.65;margin:12px 0}

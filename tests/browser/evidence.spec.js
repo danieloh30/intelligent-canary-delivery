@@ -40,3 +40,25 @@ test('numerical correction audit preserves original claims and distinguishes rec
  const audit=view.locator('.numerical-review');await expect(audit).toContainText('Sample contradiction: 58 requests >= 30');await expect(audit).toContainText('No supported numerical contradiction detected');
  await audit.locator('summary').click();await expect(audit.locator('pre')).toContainText('Insufficient requests');await expect(audit.locator('pre')).toContainText('Canary retries confirmed');
 });
+
+test('retry-budget phrases and numeric stable/canary contrast are highlighted safely',async({page})=>{
+ const e=evaluation();e.evidence.stable.attemptsPerCheckout=1;e.evidence.canary.attemptsPerCheckout=5;
+ e.recommendation.summary='The canary exceeded its retry budget with 5 attempts per checkout. The stable revision had only 1 attempt per checkout.';
+ e.decision.effective='NO_GO';e.decision.reason='Retry safety budget exceeded: canary 5.0 attempts per checkout versus stable 1.0; more than 2 attempts and more than twice stable';
+ await setup(page,e);await page.goto('/');await page.getByRole('button',{name:'Evidence explorer'}).click();
+ const view=page.locator('#evidence-content');await expect(view.locator('.evidence-decision mark')).toHaveText(['retry budget with 5 attempts per checkout','only 1 attempt per checkout','Retry safety budget exceeded','canary 5.0 attempts per checkout versus stable 1.0','more than 2 attempts and more than twice stable']);
+ await expect(view.locator('.retry-budget-row mark')).toHaveText(['1.00×','5.00×']);await expect(view.locator('.retry-budget-row')).toContainText('Corroborating requests and logs are required');
+ await page.locator('.evidence-decision').screenshot({path:'/private/tmp/canary-retry-highlights.png'});
+});
+test('execution diagnostics explain incomplete agents instead of inventing an evidence shortage',async({page})=>{
+ const e=evaluation();e.status='FAILED';e.recommendation.summary='Agent execution failed: An agent response could not be parsed';e.decision.reason=e.recommendation.summary;
+ e.executionFailures=[{attempt:1,category:'INVALID_MODEL_OUTPUT',message:'An agent response could not be parsed (OutputParsingException)',retryScheduled:true},{attempt:2,category:'INVALID_MODEL_OUTPUT',message:'An agent response could not be parsed (OutputParsingException)',retryScheduled:false}];
+ await setup(page,e);await page.goto('/');await page.getByRole('button',{name:'Evidence explorer'}).click();
+ const diagnostics=page.locator('.execution-failures');await expect(diagnostics).toContainText('INVALID_MODEL_OUTPUT');await expect(diagnostics).toContainText('No further automatic retry');await expect(diagnostics).toContainText('does not establish that customer health is degraded');
+});
+
+test('controlled trace gap explains the consequence, enterprise lesson and recovery without changing saved findings',async({page})=>{
+ const e=evaluation();e.evidence.missing=['Presenter-injected trace evidence outage'];e.evidence.traces=[];e.recommendation.summary='Required evidence is missing';
+ await setup(page,e);await page.goto('/');await page.getByRole('button',{name:'Evidence explorer'}).click();
+ const insight=page.locator('.evidence-gap-insight');await expect(insight).toContainText('Healthy metrics are not enough to authorize promotion');await expect(insight).toContainText('mandatory request-level check for dependency and retry behavior is incomplete');await expect(insight).toContainText('Select Healthy release');await expect(insight).toContainText('Human approval cannot waive');await expect(page.locator('.evidence-decision')).toContainText('Required evidence is missing');
+});

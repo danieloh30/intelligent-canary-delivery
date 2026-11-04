@@ -59,4 +59,27 @@ class AgentWorkflowTest {
         }
     }
 
+    @Test void malformedAgentOutputRecoversOnceAndPersistentFailureHasAnExplicitReason() throws Exception {
+        MockOpenAi.forceHealthy=true;
+        try {
+            for(int failures:List.of(1,100)) {
+                MockOpenAi.malformedResponses.set(failures);
+                var e=investigations.start(RehearsalEvidence.forScene("healthy"),"development");
+                for(int i=0;i<600 && e.status.equals("RUNNING");i++)Thread.sleep(50);
+                assertFalse(e.executionFailures.isEmpty(),"Model parse failure must be retained for inspection");
+                assertEquals("INVALID_MODEL_OUTPUT",e.executionFailures.getFirst().category());
+                assertTrue(e.executionFailures.getFirst().retryScheduled());
+                assertTrue(e.toolCalls.get()<=12);
+                if(failures==1){assertEquals("COMPLETE",e.status);assertEquals(Domain.Verdict.GO,e.decision.effective());}
+                else {
+                    assertEquals("FAILED",e.status);assertEquals(Domain.Verdict.HOLD,e.decision.effective());
+                    assertEquals(2,e.executionFailures.size());assertFalse(e.executionFailures.getLast().retryScheduled());
+                    assertTrue(e.decision.reason().contains("Agent execution failed"));
+                    assertFalse(e.decision.reason().contains("raw-model-content"));
+                    assertFalse(e.recommendation.summary().contains("Mandatory tool reads"));
+                }
+            }
+        } finally {MockOpenAi.forceHealthy=false;MockOpenAi.malformedResponses.set(0);}
+    }
+
 }

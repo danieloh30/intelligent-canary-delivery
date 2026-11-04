@@ -19,6 +19,7 @@ public class Evaluation {
     public final AtomicInteger toolCalls = new AtomicInteger();
     public volatile String numericalFeedback = "No correction requested";
     public final List<dev.danieloh.canary.agentic.NumericalReview.Audit> numericalReviews = new java.util.concurrent.CopyOnWriteArrayList<>();
+    public final List<dev.danieloh.canary.agentic.AgentFailure> executionFailures = new java.util.concurrent.CopyOnWriteArrayList<>();
     public volatile Recommendation recommendation;
     public volatile Decision decision;
     public Evaluation(Evidence evidence, String profile, String mode) {

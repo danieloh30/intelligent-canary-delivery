@@ -3,6 +3,7 @@ package dev.danieloh.canary.service;
 import dev.danieloh.canary.model.Evaluation;
 import dev.danieloh.canary.agentic.InvestigationWorkflow;
 import dev.danieloh.canary.agentic.NumericalReview;
+import dev.danieloh.canary.agentic.AgentFailure;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -41,7 +42,17 @@ public class InvestigationService {
                 e.agents.put("metrics","RUNNING");
                 InvestigationWorkflow.Report report=null;
                 for(int attempt=1;attempt<=2;attempt++) {
-                    report=workflow.investigate(e.id);
+                    try { report=workflow.investigate(e.id); }
+                    catch(RuntimeException failure) {
+                        var diagnostic=AgentFailure.describe(failure,attempt,attempt==1 && e.toolCalls.get()<=6
+                            && Instant.now().isBefore(e.startedAt.plusSeconds(60)) && e.status.equals("RUNNING"));
+                        e.executionFailures.add(diagnostic);
+                        store.event("agent-error",diagnostic.category()+": "+diagnostic.message());
+                        if(!diagnostic.retryScheduled())throw failure;
+                        e.numericalFeedback="The previous pass failed to return valid structured findings. Read the SAME frozen evidence and return the required JSON fields.";
+                        store.event("orchestrator","Retrying recoverable agent execution once; original deadline, frozen evidence and tool budget unchanged");
+                        continue;
+                    }
                     var issues=NumericalReview.issues(e.evidence,report);
                     e.numericalReviews.add(new NumericalReview.Audit(attempt,issues,report));
                     if(issues.isEmpty())break;
@@ -65,10 +76,13 @@ public class InvestigationService {
         } catch (Exception ex) {
             synchronized(e) {
                 e.status="FAILED";
-                e.recommendation=new Recommendation(Verdict.HOLD,"Investigation unavailable or deadline exceeded",List.of(e.id),List.of("Agent execution incomplete"));
+                if(e.executionFailures.isEmpty() || ex instanceof TimeoutException)
+                    e.executionFailures.add(AgentFailure.describe(ex,1,false));
+                var failure=e.executionFailures.getLast();
+                e.recommendation=new Recommendation(Verdict.HOLD,"Agent execution failed: "+failure.message(),List.of(e.id),List.of(failure.category()));
                 e.agents.replaceAll((k,v)->v.equals("COMPLETE")?v:"UNAVAILABLE");
                 complete(e);
-            } store.event("orchestrator","Investigation held: " + ex.getClass().getSimpleName());
+            } store.event("orchestrator",e.recommendation.summary());
         }
     }
     private Finding call(Evaluation e,String name,Callable<Finding> fn) {
@@ -95,7 +109,7 @@ public class InvestigationService {
         store.event("policy","Presenter approved " + e.id + ": " + e.decision.effective());
     }
     private void complete(Evaluation e) { synchronized(e) {
-        if(e.mode.equals("live")) {
+        if(e.mode.equals("live") && !e.status.equals("FAILED")) {
             boolean tools=e.toolReads.containsAll(Set.of("metrics-tool","trace-tool","log-tool","release-tool","runbook-tool"));
             boolean findings=e.findings.size()==3 && e.findings.values().stream().allMatch(f ->
                 f!=null && f.summary()!=null && !f.summary().isBlank() && f.evidenceIds()!=null
@@ -104,9 +118,11 @@ public class InvestigationService {
             if(!tools || !findings) e.recommendation=new Recommendation(Verdict.HOLD,
                 "Mandatory tool reads or valid specialist findings are missing",List.of(e.id),List.of("Incomplete investigation"));
         }
-        if(!e.numericalReviews.isEmpty() && !e.numericalReviews.getLast().issues().isEmpty())
+        if(!e.status.equals("FAILED") && !e.numericalReviews.isEmpty() && !e.numericalReviews.getLast().issues().isEmpty())
             e.recommendation=new Recommendation(Verdict.HOLD,"Numerical contradictions remain after one correction attempt",List.of(e.id),e.numericalReviews.getLast().issues());
         e.decision=policy.evaluate(e.evidence,e.recommendation,e.profile,false,Instant.now());
-        e.status="COMPLETE"; store.event("policy",e.decision.effective()+": "+e.decision.reason());
+        if(e.status.equals("FAILED") && e.decision.effective()==Verdict.HOLD)
+            e.decision=new Decision(e.recommendation.verdict(),Verdict.HOLD,e.recommendation.summary(),false,e.decision.expiresAt(),e.profile);
+        if(!e.status.equals("FAILED"))e.status="COMPLETE"; store.event("policy",e.decision.effective()+": "+e.decision.reason());
     }}
 }

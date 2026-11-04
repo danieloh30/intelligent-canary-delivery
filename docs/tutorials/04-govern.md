@@ -46,6 +46,14 @@ The lesson is **absence of evidence is not evidence of safety**. This scenario d
 
 In this demo, selecting Missing evidence and running an investigation deliberately withholds trace observations and records a **presenter-injected trace evidence outage**. Metrics remain observations from real cluster requests. It does not stop Jaeger or demonstrate an actual tracing backend failure. The recorded missing prerequisite makes deterministic Decision Policy return **HOLD**, irrespective of an optimistic model recommendation.
 
+### Explain the HOLD in plain language
+
+**“Required trace-linked request observations were deliberately withheld from this investigation. HTTP success and latency still look healthy, but the mandatory check of dependency and retry behavior is incomplete. Decision Policy holds promotion until a fresh investigation supplies the missing evidence.”**
+
+Evidence explorer shows this as **Healthy metrics are not enough to authorize promotion**, with the missing observation, its consequence, an enterprise example, and the next action. Use this explanation instead of only saying that an outage is a prerequisite. The required evidence is the prerequisite; the outage is the reason it is unavailable.
+
+**Contrast to share:** scenario 03 has evidence of harmful retries and rejects the candidate with NO-GO. Scenario 04 lacks required corroboration and withholds judgment with HOLD. Human approval adds authorization; it cannot manufacture the missing observations.
+
 ### Presenter sequence
 
 1. Use a healthy **v2** candidate at an active analysis gate, with no shared slowdown and at least 30 observations in both cohorts. A completed/aborted gate needs a fresh release first.
