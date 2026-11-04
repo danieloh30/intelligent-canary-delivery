@@ -10,8 +10,10 @@ public class DecisionPolicy {
         Instant expiry = e.capturedAt().plusSeconds(120);
         if (now.isAfter(expiry) || e.capturedAt().isAfter(now.plusSeconds(5)))
             return result(r, Verdict.HOLD, "Evidence is stale or clock skew is invalid", false, expiry, profile);
-        if (!e.missing().isEmpty() || e.stable().requests() < 30 || e.canary().requests() < 30)
-            return result(r, Verdict.HOLD, "Required evidence or minimum 30 requests per revision is missing", false, expiry, profile);
+        if (!e.missing().isEmpty())
+            return result(r, Verdict.HOLD, "Required evidence missing: " + String.join("; ",e.missing()), false, expiry, profile);
+        if (e.stable().requests() < 30 || e.canary().requests() < 30)
+            return result(r, Verdict.HOLD, "Minimum 30 requests per revision not met", false, expiry, profile);
         if (e.canary().errorRate() >= 0.10)
             return result(r, Verdict.NO_GO, "Hard safety cap: canary errors reached 10%", false, expiry, profile);
         if (r == null || r.verdict() == null || r.summary() == null || r.summary().isBlank()

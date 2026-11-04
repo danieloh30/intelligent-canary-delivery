@@ -51,7 +51,7 @@ public class DemoResource {
         if(!Set.of("healthy","slowdown","retry","missing").contains(scene)||!Set.of("v1","v2","v3").contains(revision))throw new BadRequestException();
         if(store.hasRunningEvaluation())throw new ClientErrorException("An investigation is already running",409);
         Evidence evidence=cluster.isEnabled()?collector.collect(revision):RehearsalEvidence.forScene(scene);
-        if(cluster.isEnabled() && scene.equals("missing")) evidence=new Evidence(evidence.id(),evidence.capturedAt(),evidence.source(),evidence.revision(),evidence.stableRevision(),evidence.rolloutStep(),evidence.stable(),evidence.canary(),List.of(),evidence.logs(),List.of("Presenter-injected trace evidence outage"),evidence.releaseNotes());
+        if(cluster.isEnabled() && scene.equals("missing")) evidence=evidence.withoutTraceEvidence("Presenter-injected trace evidence outage");
         return investigations.start(evidence,profile);
         }
     }
@@ -72,7 +72,7 @@ public class DemoResource {
             var status=(Map<?,?>)cluster.rollout().getAdditionalProperties().get("status");
             String hash=Objects.toString(status.get("currentPodHash"),"");
             if(!(status.get("currentStepIndex") instanceof Number step) || step.intValue()!=e.evidence.rolloutStep())return Map.of("verdict","HOLD","reason","A fresh investigation is required at this rollout step");
-            boolean matches=e.evidence.traces().stream().anyMatch(x->hash.equals(x.get("podHash")));
+            boolean matches=e.evidence.matchesPodHash(hash);
             if(!matches)return Map.of("verdict","HOLD","reason","Current rollout revision differs from evidence");
         }catch(Exception ex){return Map.of("verdict","HOLD","reason","Cannot verify rollout identity");}
         return Map.of("verdict",e.decision.effective().name(),"evaluationId",e.id,"reason",e.decision.reason());

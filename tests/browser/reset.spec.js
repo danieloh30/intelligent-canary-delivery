@@ -72,3 +72,16 @@ test('NO-GO stays visible after abort resets the step and evidence expires, then
  await page.locator('[data-tab="overview"]').click();rollout.status.currentPodHash='new-canary';rollout.status.phase='Progressing';rollout.status.abort=false;
  await expect(page.locator('#effective-verdict')).toHaveText('Awaiting investigation',{timeout:10000});
 });
+
+test('Missing evidence HOLD stays current without trace rows and clears when rollout identity changes',async({page})=>{
+ const latest=evaluation();latest.evidence.canaryPodHash='old-canary';latest.evidence.traces=[];
+ latest.evidence.missing=['Presenter-injected trace evidence outage'];latest.decision.reason='Required evidence missing: Presenter-injected trace evidence outage';latest.recommendation={verdict:'HOLD',summary:'Missing required trace evidence',limitations:['Trace evidence unavailable'],evidenceIds:[latest.id]};
+ const rollout={spec:{},status:{phase:'Progressing',currentPodHash:'old-canary',stableRS:'old-stable',currentStepIndex:2}};
+ await page.route('**/api/state',r=>r.fulfill({json:{mode:'live',clusterEnabled:true,latest,events:[]}}));
+ await page.route('**/api/cluster',r=>r.fulfill({json:{connected:true,candidateVersion:'v2',stableVersion:'v1',rollout}}));
+ await page.goto('/');await expect(page.locator('#effective-verdict')).toHaveText('HOLD');await expect(page.locator('#static-verdict')).toHaveText('PASS');await expect(page.locator('#latency')).toHaveText('490');
+ await expect(page.locator('#policy-reason')).toContainText('trace evidence outage');await expect(page.locator('#approve')).toBeHidden();
+ await page.locator('[data-tab="evidence"]').click();await expect(page.locator('.evidence-snapshot')).not.toContainText('Historical investigation');await expect(page.locator('.evidence-verdict')).toHaveText(['HOLD','HOLD']);
+ await page.reload();await expect(page.locator('#effective-verdict')).toHaveText('HOLD');
+ rollout.status.currentPodHash='new-candidate';await expect(page.locator('#effective-verdict')).toHaveText('Awaiting investigation',{timeout:10000});
+});

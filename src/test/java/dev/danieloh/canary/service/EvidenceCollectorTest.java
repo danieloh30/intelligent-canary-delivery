@@ -38,6 +38,7 @@ class EvidenceCollectorTest {
             try {
                 var evidence=collector.collect("v2",rollout);
                 assertTrue(evidence.missing().isEmpty(),evidence.missing().toString());assertEquals(1,evidence.stable().requests());assertEquals(31,evidence.canary().requests());
+                assertEquals("candidate",evidence.canaryPodHash());assertTrue(evidence.matchesPodHash("candidate"));
                 assertEquals(5,evidence.canary().p95Ms());assertEquals(1,evidence.canary().attemptsPerCheckout());
                 assertEquals(11,evidence.traces().size());assertTrue(evidence.traces().stream().noneMatch(x->x.get("traceId").equals("old")));
             }finally{collector.shutdown();}

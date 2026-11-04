@@ -22,6 +22,8 @@ Reset and release actions reject concurrent investigations. A reset on an alread
 
 Dashboard release responses include `refreshRequested` as the string `"true"` or `"false"`. The server requests a hard refresh of the named `canary-checkout` Application only after Git accepts the commit. A failed refresh does not roll back or invalidate that commit; the response reports the automatic-sync fallback. The control service needs its existing Application read permission plus the named-Application patch Role installed by `scripts/configure-release-refresh.sh`. This presenter action is not an agent tool, does not patch the Rollout, and does not bypass analysis or approval gates.
 
+Cluster evidence includes `canaryPodHash`, captured from Rollout status independently of trace observations. Withholding traces preserves this metadata and records the missing prerequisite; it does not turn a current HOLD into an unrelated historical investigation. The SPA, progress guidance, and analysis endpoint still reject mismatched rollout stages, pod-template identities, and expired authorization. Required-evidence failures identify the actual gap separately from insufficient request counts.
+
 ## Start an investigation
 
 The endpoint accepts query parameters and does not require a JSON body:

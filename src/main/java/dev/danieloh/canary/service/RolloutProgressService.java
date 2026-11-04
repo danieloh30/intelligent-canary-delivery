@@ -106,7 +106,7 @@ public class RolloutProgressService {
             else {state="READY";message="Ready to investigate at "+weight+"% canary. The analysis gate is waiting for your decision.";}
             var latest=store.latest();
             boolean same=latest!=null&&latest.evidence.rolloutStep()==index&&latest.evidence.revision().equals(revision)
-                &&latest.evidence.traces().stream().anyMatch(x->hash.equals(x.get("podHash")));
+                &&latest.evidence.matchesPodHash(hash);
             if(same&&ready) {
                 if(latest.status.equals("RUNNING")){state="INVESTIGATING";message="Java agents are investigating this stage. Follow Decision activity below.";ready=false;}
                 else if(latest.decision!=null&&Instant.now().isBefore(latest.decision.expiresAt())) {

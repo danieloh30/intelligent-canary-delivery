@@ -33,17 +33,22 @@ function releasePending(){
  const intent=state.releaseIntent,actual=clusterView?.rollout?.spec?.template?.metadata?.annotations?.['demo.canary/released-at'];
  return !!(state.clusterEnabled&&intent?.releasedAt&&actual!==intent.releasedAt&&!(Date.parse(actual)>=Date.parse(intent.releasedAt)));
 }
+function evidenceMatchesHash(e,hash){
+ if(!e.evidence||!hash)return false;
+ const observed=e.evidence.canaryPodHash;
+ return observed?observed===hash:!!e.evidence.traces?.some(x=>x.podHash===hash&&x.cohort!=='stable');
+}
 function evidenceCurrent(e){
  if(!e.evidence)return false;
  if(!state.clusterEnabled)return true;
  const r=clusterView?.rollout?.status;
- return !!r&&!releasePending()&&clusterView.candidateVersion===e.evidence.revision&&r.currentStepIndex===e.evidence.rolloutStep&&e.evidence.traces?.some(x=>x.podHash===r.currentPodHash);
+ return !!r&&!releasePending()&&clusterView.candidateVersion===e.evidence.revision&&r.currentStepIndex===e.evidence.rolloutStep&&evidenceMatchesHash(e,r.currentPodHash);
 }
 function retainedNoGo(e){
  const r=clusterView?.rollout?.status;
  return !!(state.clusterEnabled&&clusterView?.connected&&!releasePending()&&e.decision?.effective==='NO_GO'&&e.evidence
   &&(r?.abort===true||['Degraded','Failed','Error'].includes(r?.phase))&&clusterView.candidateVersion===e.evidence.revision
-  &&e.evidence.traces?.some(x=>x.podHash===r.currentPodHash&&x.cohort!=='stable'));
+  &&evidenceMatchesHash(e,r.currentPodHash));
 }
 function renderProgress(){
  const p=progressView,r=clusterView?.rollout?.status;

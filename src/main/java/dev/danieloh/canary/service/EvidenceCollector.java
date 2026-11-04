@@ -73,7 +73,7 @@ public class EvidenceCollector {
                 case "v1" -> "v1: baseline checkout with one inventory attempt";
                 case "v3" -> "v3: inventory retry budget increased to eight attempts";
                 default -> "v2: checkout response optimization";
-            });
+            },canaryHash);
     }
     public static Signal summarize(List<Map<String,Object>> observations) {
         if(observations.isEmpty())return new Signal(0,0,0,0);
