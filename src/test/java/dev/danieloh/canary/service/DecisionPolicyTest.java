@@ -41,4 +41,30 @@ class DecisionPolicyTest {
         var worse=signals(650,780.01,1,1,0);assertEquals(Verdict.NO_GO,policy.evaluate(worse,noGo(worse),"development",false,Instant.now()).effective());
     }
 
+    @Test void retryBudgetRejectsDespiteModelHoldUnderEitherProfile() {
+        var e=RehearsalEvidence.forScene("retry");
+        var hold=new Recommendation(Verdict.HOLD,"Uncertain",List.of(e.id()),List.of("58 requests is below 30"));
+        for(var profile:List.of("development","production")) {
+            var d=policy.evaluate(e,hold,profile,false,Instant.now());
+            assertEquals(Verdict.NO_GO,d.effective());assertFalse(d.approvalRequired());
+            assertTrue(d.reason().contains("Retry safety budget exceeded"));assertEquals(Verdict.HOLD,d.recommendation());
+        }
+    }
+    @Test void retryBudgetStillRequiresFreshCompleteSufficientAndCorroboratedEvidence() {
+        var e=RehearsalEvidence.forScene("retry");
+        for(var v:List.of(
+            new Evidence(e.id(),e.capturedAt(),e.source(),"v3","v1",2,e.stable(),new Signal(29,0,130,5),e.traces(),e.logs(),List.of(),e.releaseNotes()),
+            e.withoutTraceEvidence("traces unavailable"),
+            new Evidence(e.id(),e.capturedAt(),e.source(),"v3","v1",2,e.stable(),e.canary(),e.traces(),List.of("unrelated log"),List.of(),e.releaseNotes()))) {
+            var hold=new Recommendation(Verdict.HOLD,"Insufficient evidence",List.of(v.id()),List.of("Unknown cause"));
+            assertEquals(Verdict.HOLD,policy.evaluate(v,hold,"production",true,Instant.now()).effective());
+        }
+        assertEquals(Verdict.HOLD,policy.evaluate(e,go(e),"development",false,Instant.now().plusSeconds(121)).effective());
+    }
+    @Test void passingLatencyNeverForcesGoOverUnresolvedModelLimitations() {
+        var e=signals(2.227856,7.797314,1,1,0);
+        var hold=new Recommendation(Verdict.HOLD,"Unknown cause",List.of(e.id()),List.of("Incomplete trace coverage"));
+        assertEquals(Verdict.HOLD,policy.evaluate(e,hold,"development",false,Instant.now()).effective());
+    }
+
 }

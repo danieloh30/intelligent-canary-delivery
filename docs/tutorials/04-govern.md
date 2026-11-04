@@ -8,7 +8,7 @@ The policy covers four practical concerns:
 
 - **Traffic and freshness:** at least 30 requests per revision, with decisions expiring 120 seconds after evidence capture.
 - **Evidence quality:** HOLD for missing required evidence, invalid references, unsuccessful mandatory tool reads, or unresolved limitations.
-- **Customer safety:** enforce error and latency limits; an LLM GO cannot override them.
+- **Customer safety:** enforce error, latency, and retry limits; an LLM GO cannot override them. The retry safety budget produces NO-GO when canary attempts per checkout exceed 2 AND exceed twice stable, with a sampled retrying canary request and its trace-linked log. Fresh, complete evidence and at least 30 requests per cohort remain prerequisites. Approval cannot override NO-GO.
 - **Human approval:** production promotion requires an explicit presenter approval when the recommendation is otherwise eligible.
 
 The SPA’s expandable **Decision Policy** explanation summarizes these rules. Evidence explorer shows their resulting effective decision.
@@ -77,6 +77,8 @@ The platform validates:
 - Customer health before GO: p95 at most 500 ms and errors at most 1%.
 - Production approval when applicable.
 - The current release, pod-template hash, and rollout step at analysis time.
+
+Java-computed tool comparisons keep milliseconds and sample thresholds explicit. A targeted consistency review catches false sample-shortage and latency-limit claims, allows one correction using the same frozen evidence, and retains original/corrected reports in Evidence explorer. It does not establish root cause or guarantee that every prose error is detected. Unresolved contradictions retain HOLD unless independently corroborated hard safety evidence requires NO-GO.
 
 Model execution has an 85-second orchestration deadline, bounded per-call timeouts, and a 12-tool investigation budget. Failures and unfinished investigations produce HOLD. Local fixture decisions cannot authorize a live rollout.
 

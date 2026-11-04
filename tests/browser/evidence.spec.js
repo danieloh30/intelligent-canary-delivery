@@ -31,3 +31,12 @@ test('page, Shared slowdown scenario and Extended mode survive reload without an
  await expect(page.locator('#evidence')).toHaveClass('tab active');await expect(page.locator('[data-scene="slowdown"]')).toHaveClass('scene selected');await expect(page.locator('#demo-mode')).toHaveValue('extended');expect(posts).toBe(0);
  await page.getByRole('button',{name:'Release overview'}).click();await page.locator('[data-scene="missing"]').click();await page.reload();await expect(page.locator('[data-scene="missing"]')).toHaveClass('scene extended selected');
 });
+
+test('numerical correction audit preserves original claims and distinguishes recommendation from safety decision',async({page})=>{
+ const e=evaluation();e.recommendation.verdict='HOLD';e.decision.effective='NO_GO';e.decision.reason='Retry safety budget exceeded: canary 5 attempts per checkout versus stable 1';
+ e.numericalReviews=[{attempt:1,issues:['Sample contradiction: 58 requests >= 30'],report:{recommendation:{verdict:'HOLD',summary:'Insufficient requests'}}},{attempt:2,issues:[],report:{recommendation:{verdict:'NO_GO',summary:'Canary retries confirmed'}}}];
+ await setup(page,e);await page.goto('/');await page.getByRole('button',{name:'Evidence explorer'}).click();
+ const view=page.locator('#evidence-content');await expect(view.locator('.evidence-decision')).toContainText('Agent recommendation: HOLD → effective decision: NO-GO');
+ const audit=view.locator('.numerical-review');await expect(audit).toContainText('Sample contradiction: 58 requests >= 30');await expect(audit).toContainText('No supported numerical contradiction detected');
+ await audit.locator('summary').click();await expect(audit.locator('pre')).toContainText('Insufficient requests');await expect(audit.locator('pre')).toContainText('Canary retries confirmed');
+});

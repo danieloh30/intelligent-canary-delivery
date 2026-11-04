@@ -211,6 +211,11 @@ function renderEvidence(e){
  }
  const raw=evidenceNode('section','evidence-raw');raw.append(evidenceNode('h3','','Inspect the underlying record'));
  for(const [title,value]of [['Observation window · signals, sampled requests and logs',v],['Agent recommendation',e.recommendation||{status:e.status}],['Decision Policy',e.decision||{status:'Pending'}]]){const details=evidenceNode('details','evidence-block');details.append(evidenceNode('summary','',title),evidenceNode('pre','',JSON.stringify(value,null,2)));raw.append(details);}host.append(raw);
+ if(e.numericalReviews?.length){
+ const review=evidenceNode('section','evidence-specialist numerical-review');review.append(evidenceNode('h3','','Numerical consistency review'),evidenceNode('p','','Java supplies exact sample and latency comparisons. At most one correction pass uses the same frozen evidence and original execution budget. This review does not force a GO.'));
+ for(const audit of e.numericalReviews){evidenceList(review,`Attempt ${audit.attempt}`,audit.issues?.length?audit.issues:['No supported numerical contradiction detected.']);}
+ const details=evidenceNode('details','evidence-block');details.append(evidenceNode('summary','','Original and corrected agent reports'),evidenceNode('pre','',JSON.stringify(e.numericalReviews,null,2)));review.append(details);host.append(review);
+ }
 }
 async function poll(){
  const generation=stateGeneration;

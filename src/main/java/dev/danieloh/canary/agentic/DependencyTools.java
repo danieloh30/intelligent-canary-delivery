@@ -9,8 +9,9 @@ public class DependencyTools {
     @Inject ToolAccess access;
     @Tool("Read sampled checkout request observations carrying real OpenTelemetry trace IDs; full spans are in Jaeger")
     public Map<String,Object> findDependencyTraces(String evaluation_id) {
-        var evidence=access.read(evaluation_id,"trace-tool").evidence;
-        return Map.of("evidenceId",evidence.id(),"canaryRevision",evidence.revision(),"observations",evidence.traces());
+        var evaluation=access.read(evaluation_id,"trace-tool");
+        var evidence=evaluation.evidence;
+        return Map.of("evidenceId",evidence.id(),"canaryRevision",evidence.revision(),"observations",evidence.traces(),"computedChecks",NumericalReview.facts(evaluation));
     }
     @Tool("Read bounded checkout retry log records correlated by trace ID in the same observation window")
     public Map<String,Object> findRetryLogs(String evaluation_id) {

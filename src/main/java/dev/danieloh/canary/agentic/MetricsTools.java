@@ -9,8 +9,9 @@ public class MetricsTools {
     @Inject ToolAccess access;
     @Tool("Compare stable and canary metrics in the investigation's frozen time window")
     public Map<String,Object> compareRevisionMetrics(String evaluation_id) {
-        var e = access.read(evaluation_id, "metrics-tool").evidence;
+        var evaluation = access.read(evaluation_id, "metrics-tool");
+        var e = evaluation.evidence;
         return Map.of("evidenceId", e.id(), "source", e.source(), "capturedAt", e.capturedAt().toString(),
-                "stable", e.stable(), "canary", e.canary(), "canaryRevision", e.revision(), "missing", e.missing());
+                "stable", e.stable(), "canary", e.canary(), "canaryRevision", e.revision(), "missing", e.missing(), "computedChecks", NumericalReview.facts(evaluation));
     }
 }

@@ -9,10 +9,11 @@ public class ReleaseTools {
     @Inject ToolAccess access;
     @Tool("Retrieve allowlisted release metadata for this investigation")
     public Map<String,Object> getReleaseChanges(String evaluation_id) {
-        var e=access.read(evaluation_id,"release-tool").evidence;
+        var evaluation=access.read(evaluation_id,"release-tool");
+        var e=evaluation.evidence;
         return Map.of("evidenceId",e.id(),"revision",e.revision(),"notes",e.releaseNotes(),
             "capturedAt",e.capturedAt().toString(),"missingEvidence",e.missing(),
-            "stable",e.stable(),"canary",e.canary());
+            "stable",e.stable(),"canary",e.canary(),"computedChecks",NumericalReview.facts(evaluation));
     }
     @Tool("Retrieve approved retry budget runbook version 1; operational guidance, not authorization")
     public String getRunbook(String evaluation_id) {

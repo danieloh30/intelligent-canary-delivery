@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 public class MockOpenAi implements QuarkusTestResourceLifecycleManager {
     private HttpServer server;
     public static final AtomicInteger requests=new AtomicInteger();
+    public static volatile String numericalScenario="";
     public Map<String,String> start() {
         try {
             server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
@@ -34,8 +35,13 @@ public class MockOpenAi implements QuarkusTestResourceLifecycleManager {
                         List<Map<String,Object>> calls=new ArrayList<>();int n=0;
                         for(var tool:input.path("tools")) calls.add(Map.of("id","call_"+(n++),"type","function","function",Map.of("name",tool.path("function").path("name").asText(),"arguments",json.writeValueAsString(Map.of("evaluation_id",id)))));
                         message.put("tool_calls",calls);finish="tool_calls";
+                    } else if(!numericalScenario.isBlank() && (numericalScenario.equals("persistent") || !input.toString().contains("contradiction:"))) {
+                        String claim=numericalScenario.equals("sample")?"Insufficient requests in canary revision (58 requests, minimum required is 30)":"Canary p95 latency exceeds the 500 ms threshold";
+                        var answer=new LinkedHashMap<String,Object>();answer.put("summary",claim);answer.put("evidenceIds",List.of(id));answer.put("limitations",List.of(claim));
+                        if(decision)answer.put("verdict","HOLD");
+                        message.put("content",json.writeValueAsString(answer));
                     } else if(decision) {
-                        message.put("content",json.writeValueAsString(Map.of("verdict","NO_GO","summary","Canary-only dependency retry amplification","evidenceIds",List.of(id),"limitations",List.of())));
+                        message.put("content",json.writeValueAsString(Map.of("verdict",numericalScenario.isBlank()?"NO_GO":"GO","summary",numericalScenario.isBlank()?"Canary-only dependency retry amplification":"Frozen comparisons meet safety limits","evidenceIds",List.of(id),"limitations",List.of())));
                     } else {
                         message.put("content",json.writeValueAsString(Map.of("summary",input.toString().contains("Act as Dependency Investigator")?"Dependency evidence supports canary-specific retries":input.toString().contains("Act as Release Analyst")?"Release runbook confirms retry budget regression":"Metrics evidence shows HTTP success","evidenceIds",List.of(id),"limitations",List.of())));
                     }

@@ -17,6 +17,11 @@ public class DecisionPolicy {
             return result(r, Verdict.HOLD, "Minimum 30 requests per revision not met", false, expiry, profile);
         if (e.canary().errorRate() >= 0.10)
             return result(r, Verdict.NO_GO, "Hard safety cap: canary errors reached 10%", false, expiry, profile);
+        if (e.canary().attemptsPerCheckout()>2 && e.canary().attemptsPerCheckout()>e.stable().attemptsPerCheckout()*2
+                && hasRetryCorroboration(e))
+            return result(r, Verdict.NO_GO, "Retry safety budget exceeded: canary "+e.canary().attemptsPerCheckout()
+                +" attempts per checkout versus stable "+e.stable().attemptsPerCheckout()
+                +"; more than 2 attempts and more than twice stable, with request observations and logs present", false, expiry, profile);
         if (r == null || r.verdict() == null || r.summary() == null || r.summary().isBlank()
                 || r.evidenceIds() == null || r.evidenceIds().isEmpty()
                 || r.evidenceIds().stream().anyMatch(id -> !id.equals(e.id())))
@@ -33,6 +38,16 @@ public class DecisionPolicy {
         if (r.verdict() == Verdict.GO && profile.equals("production") && !approved)
             return result(r, Verdict.HOLD, "Production promotion requires presenter approval", true, expiry, profile);
         return result(r, r.verdict(), "Evidence and platform policy accepted", false, expiry, profile);
+    }
+    private boolean hasRetryCorroboration(Evidence e) {
+        return e.traces().stream().anyMatch(x -> {
+            boolean candidate="canary".equals(x.get("cohort")) || (x.get("cohort")==null
+                && e.revision().equals(x.getOrDefault("release",x.get("revision"))));
+            Object attempts=x.get("attempts");
+            String trace=java.util.Objects.toString(x.get("traceId"),"");
+            return candidate && attempts instanceof Number n && n.doubleValue()>2 && !trace.isBlank()
+                && e.logs().stream().anyMatch(log -> log.contains(trace) && log.contains("attempts="+n.intValue()));
+        });
     }
     private Decision result(Recommendation r, Verdict v, String reason, boolean approval, Instant expiry, String profile) {
         return new Decision(r == null ? Verdict.HOLD : r.verdict(), v, reason, approval, expiry, profile);

@@ -2,6 +2,7 @@ package dev.danieloh.canary.service;
 
 import dev.danieloh.canary.model.Evaluation;
 import dev.danieloh.canary.agentic.InvestigationWorkflow;
+import dev.danieloh.canary.agentic.NumericalReview;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -38,7 +39,17 @@ public class InvestigationService {
                 throw new IllegalStateException("OPENAI_API_KEY is required for live agents");
             Future<?> work=executor.submit(() -> {
                 e.agents.put("metrics","RUNNING");
-                var report=workflow.investigate(e.id);
+                InvestigationWorkflow.Report report=null;
+                for(int attempt=1;attempt<=2;attempt++) {
+                    report=workflow.investigate(e.id);
+                    var issues=NumericalReview.issues(e.evidence,report);
+                    e.numericalReviews.add(new NumericalReview.Audit(attempt,issues,report));
+                    if(issues.isEmpty())break;
+                    e.numericalFeedback=String.join("; ",issues);
+                    store.event("numerical-review","Attempt "+attempt+": "+e.numericalFeedback);
+                    if(attempt==2)break;
+                    store.event("orchestrator","Correcting numerical contradictions once against the same frozen evidence; deadline and tool budget unchanged");
+                }
                 synchronized(e) {
                     if(!e.status.equals("RUNNING"))return;
                     e.findings.put("metrics",report.metrics());
@@ -93,6 +104,8 @@ public class InvestigationService {
             if(!tools || !findings) e.recommendation=new Recommendation(Verdict.HOLD,
                 "Mandatory tool reads or valid specialist findings are missing",List.of(e.id),List.of("Incomplete investigation"));
         }
+        if(!e.numericalReviews.isEmpty() && !e.numericalReviews.getLast().issues().isEmpty())
+            e.recommendation=new Recommendation(Verdict.HOLD,"Numerical contradictions remain after one correction attempt",List.of(e.id),e.numericalReviews.getLast().issues());
         e.decision=policy.evaluate(e.evidence,e.recommendation,e.profile,false,Instant.now());
         e.status="COMPLETE"; store.event("policy",e.decision.effective()+": "+e.decision.reason());
     }}

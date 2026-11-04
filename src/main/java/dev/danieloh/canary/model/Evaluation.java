@@ -17,6 +17,8 @@ public class Evaluation {
     public final Map<String, String> agents = new ConcurrentHashMap<>();
     public final Set<String> toolReads = ConcurrentHashMap.newKeySet();
     public final AtomicInteger toolCalls = new AtomicInteger();
+    public volatile String numericalFeedback = "No correction requested";
+    public final List<dev.danieloh.canary.agentic.NumericalReview.Audit> numericalReviews = new java.util.concurrent.CopyOnWriteArrayList<>();
     public volatile Recommendation recommendation;
     public volatile Decision decision;
     public Evaluation(Evidence evidence, String profile, String mode) {
