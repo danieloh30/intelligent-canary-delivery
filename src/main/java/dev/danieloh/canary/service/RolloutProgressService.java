@@ -20,12 +20,15 @@ public class RolloutProgressService {
     @Inject DemoStore store;
     private Progress cached;
     private Instant cachedAt=Instant.EPOCH;
+    private DemoStore.ReleaseIntent cachedIntent;
 
     public synchronized Progress snapshot() {
         if(!cluster.isEnabled())return unavailable(false,"OFFLINE","Live rollout progress is available when connected to Kubernetes.");
-        if(cached!=null && Instant.now().isBefore(cachedAt.plusSeconds(3)))return cached;
+        var intent=store.releaseIntent();
+        if(cached!=null && Objects.equals(intent,cachedIntent) && Instant.now().isBefore(cachedAt.plusSeconds(3)))return cached;
         try {cached=read();}catch(Exception ex){cached=unavailable(false,"UNAVAILABLE","Cannot read live rollout progress. Investigation readiness is unavailable.");}
         cachedAt=Instant.now();
+        cachedIntent=intent;
         return cached;
     }
     private Progress unavailable(boolean connected,String state,String message) {
@@ -48,7 +51,12 @@ public class RolloutProgressService {
         String message=baseline?"Healthy v1 baseline. Release a candidate to begin.":complete?revision+" is fully promoted and stable.":failed?"The rollout failed or was aborted. Inspect the decision and controller logs here.":"Collecting live observations for this rollout stage.";
         var intent=store.releaseIntent();
         boolean pending=intent!=null&&pending(intent.releasedAt(),tree.at("/spec/template/metadata/annotations/demo.canary~1released-at").asText());
-        if(pending){state="RECONCILING";message="Release committed to Git. Waiting for Argo CD to apply the new candidate.";}
+        boolean controllerPending=resource.getMetadata().getGeneration()!=null
+            &&tree.path("status").has("observedGeneration")
+            &&tree.at("/status/observedGeneration").asLong()<resource.getMetadata().getGeneration();
+        if(pending||controllerPending)return new Progress(true,"RECONCILING",
+            pending?"Release committed to Git. Waiting for Argo CD to apply the new candidate.":"New manifest applied. Waiting for Argo Rollouts to observe this release.",
+            phase,revision,hash,index,0,"","","",0,0,"",Instant.now(),0,0,false,false,List.of(),stages(steps,-1,true,false,false));
         JsonNode current=index>=0&&index<steps.size()?steps.get(index):cluster.mapper().createObjectNode();
         String pause=current.has("pause")?current.path("pause").path("duration").asText():current.has("analysis")&&index>0?steps.get(index-1).path("pause").path("duration").asText():"";
         String analysisName="",analysisPhase="",interval="";int checks=0,total=0;

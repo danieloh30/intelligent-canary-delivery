@@ -180,3 +180,8 @@
 .investigation-actions small{display:block;font-size:10px;line-height:1.75;color:#526772}
 .investigation-actions button{width:100%;line-height:1.6}
 @media(max-width:760px){.investigation-cue{padding:16px;gap:18px}.investigation-actions{flex-basis:auto;width:100%}}
+
+.fault-status{padding:14px 16px;margin:14px 0;line-height:1.8;border:1px solid #b9cbd3;border-radius:8px;background:#f4f8fa;color:#314e5c}
+.fault-status[data-state="active"]{background:#fff3cd;border-color:#d6a329;color:#684b11}
+.fault-status[data-state="error"]{background:#fff0ee;border-color:#cf8277;color:#8b3026}
+#inject.fault-active{background:#fff3cd;border:2px solid #d6a329;color:#684b11;font-weight:700}

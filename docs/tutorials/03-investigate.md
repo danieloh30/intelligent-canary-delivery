@@ -85,7 +85,7 @@ The inventory fault is deliberately controlled. It makes the pattern reproducibl
 
 In the dashboard, choose **Shared slowdown**, confirm **Candidate version → v2**, and select **Release selected version through Git**. Follow the returned commit link to inspect the release diff.
 
-The server commits the version, fresh release annotation, and analysis arguments in `deploy/gitops/rollout.yaml` to the configured GitHub branch. Argo CD reconciles that commit. Selecting a candidate or scenario alone does not deploy it.
+The server commits the version, fresh release annotation, and analysis arguments in `deploy/gitops/rollout.yaml` to the configured GitHub branch. Argo CD reconciles that commit. Selecting a candidate or scenario alone does not deploy it. After a new release is accepted, previous stage highlights clear while the SPA waits for GitOps reconciliation; the new 10% stage appears after the controllers observe the commit.
 
 !!! note "Enable dashboard releases before presenting"
     Configure the server GitHub credential using the [cluster setup instructions](02-cluster.md#enable-releases-from-the-dashboard). Without it, the release button stays disabled and explains the shell alternative: `./demo.sh release v2`. The shell command requires a clean working tree; the dashboard writes directly to GitHub. Run `git pull --ff-only` before later editing or releasing from your local checkout.
@@ -119,7 +119,7 @@ For optional deeper inspection, open **canary-checkout** in the prepared Argo CD
 In the UI:
 
 1. Choose **Shared slowdown** and candidate **v2**.
-2. Select **Inject 25s shared slowdown**.
+2. Select **Inject 25s shared slowdown**. An amber confirmation shows that the shared inventory fault is active, adds 650 ms per call, and has about 25 seconds remaining. Let affected checkout requests appear before investigating. The status explains when the fault expires or is cleared; affected requests remain in the rolling 60-second evidence window. A failed injection displays an error beside the button.
 3. Select **Development / no approval** policy. Once Release progress shows the green **Ready to investigate** cue, select **Investigate v2 at 10%**.
 
 ### Watch the Quarkus Java agents in the SPA

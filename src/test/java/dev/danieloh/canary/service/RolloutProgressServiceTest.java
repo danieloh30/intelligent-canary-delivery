@@ -86,4 +86,26 @@ class RolloutProgressServiceTest {
         }
         try(var s=new Setup(2,"Running")){s.cluster.enabled=false;assertEquals("OFFLINE",s.service.snapshot().state());assertEquals(0,s.collector.calls);}
     }
+    @Test void newReleaseInvalidatesCompletedCacheAndClearsStages() throws Exception {
+        try(var s=new Setup(8,"Successful")) {
+            var status=(Map<String,Object>)s.cluster.resource.getAdditionalProperties().get("status");
+            status.put("phase","Healthy");status.put("currentPodHash","stable");
+            assertEquals("COMPLETE",s.service.snapshot().state());
+            s.service.store.released("v2",Instant.now().plusSeconds(1).toString(),false);
+            var p=s.service.snapshot();assertEquals("RECONCILING",p.state());assertFalse(p.ready());
+            assertEquals(0,p.targetWeight());assertFalse(p.samplesAvailable());assertEquals("",p.analysisName());
+            assertTrue(p.stages().stream().allMatch(x->x.state().equals("pending")));
+        }
+    }
+    @Test void appliedManifestCannotReuseUnobservedHealthyStatus() throws Exception {
+        try(var s=new Setup(8,"Successful")) {
+            s.cluster.resource.getMetadata().setGeneration(12L);
+            var status=(Map<String,Object>)s.cluster.resource.getAdditionalProperties().get("status");
+            status.put("phase","Healthy");status.put("currentPodHash","stable");status.put("observedGeneration","11");
+            var p=s.service.snapshot();assertEquals("RECONCILING",p.state());assertFalse(p.ready());
+            assertTrue(p.stages().stream().allMatch(x->x.state().equals("pending")));
+            assertEquals(0,s.collector.calls);
+        }
+    }
+
 }

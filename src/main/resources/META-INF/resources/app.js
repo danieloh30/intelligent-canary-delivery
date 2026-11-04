@@ -44,7 +44,7 @@ function renderProgress(){
  const stale=!p||Date.now()-progressReceivedAt>12000||Date.now()-Date.parse(p.capturedAt)>15000;
  const coherent=p&&r&&p.phase===r.phase&&p.podHash===r.currentPodHash&&p.stepIndex===r.currentStepIndex&&p.revision===clusterView?.candidateVersion;
  const pending=releasePending();
- let kind=!state.clusterEnabled?'OFFLINE':pending?'RECONCILING':p&&p.connected===false?'UNAVAILABLE':stale||!coherent?'REFRESHING':p.state;
+ let kind=!state.clusterEnabled?'OFFLINE':pending||releasing?'RECONCILING':p&&p.connected===false?'UNAVAILABLE':stale||!coherent?'REFRESHING':p.state;
  const selected=p&&$('#revision').value===p.revision;
  if(['READY','HOLD'].includes(kind)&&!selected)kind='SELECT_CANDIDATE';
  if(state.latest?.status==='RUNNING'&&evidenceCurrent(state.latest))kind='INVESTIGATING';
@@ -55,15 +55,17 @@ function renderProgress(){
  $('#investigation-cue').dataset.state=['READY'].includes(kind)?'ready':['FAILED','INCONCLUSIVE'].includes(kind)?'danger':['WARMUP','COLLECTING','HOLD','APPROVAL','SELECT_CANDIDATE'].includes(kind)?'waiting':'neutral';
  const list=$('#rollout-stages');list.replaceChildren();
  if(p?.stages?.length){
- const baseline=document.createElement('li');baseline.className='rollout-stage '+(kind==='BASELINE'?'active':'complete');baseline.textContent='Stable baseline';list.append(baseline);
- for(const stage of p.stages){const item=document.createElement('li');item.className='rollout-stage '+stage.state;item.textContent=stage.weight===100?'100% rollout':stage.weight+'% canary';if(stage.state==='active')item.setAttribute('aria-current','step');list.append(item);}
+ const resetStages=['RECONCILING','REFRESHING','UNAVAILABLE'].includes(kind);
+ const baseline=document.createElement('li');baseline.className='rollout-stage '+(resetStages?'pending':kind==='BASELINE'?'active':'complete');baseline.textContent='Stable baseline';list.append(baseline);
+ for(const stage of p.stages){const item=document.createElement('li');item.className='rollout-stage '+(resetStages?'pending':stage.state);item.textContent=stage.weight===100?'100% rollout':stage.weight+'% canary';if(!resetStages&&stage.state==='active')item.setAttribute('aria-current','step');list.append(item);}
  }
- if(state.clusterEnabled&&!stale&&coherent&&!pending){$('#traffic-weight').style.width=(p.state==='BASELINE'?0:p.targetWeight)+'%';text($('#traffic-caption'),p.state==='BASELINE'?'Stable baseline · no active candidate':p.state==='COMPLETE'?'Rollout complete · candidate is now stable':`Target: ${p.targetWeight}% canary · replica-based, approximate request share`);}
- const samples=state.clusterEnabled&&!stale&&coherent&&!pending&&p?.samplesAvailable;
+ if(state.clusterEnabled&&['RECONCILING','REFRESHING','UNAVAILABLE'].includes(kind)){$('#traffic-weight').style.width='0%';text($('#traffic-caption'),kind==='RECONCILING'?'New release pending · waiting for GitOps reconciliation':'Waiting for current rollout observations');}
+ if(state.clusterEnabled&&!stale&&coherent&&!pending&&!releasing){$('#traffic-weight').style.width=(p.state==='BASELINE'?0:p.targetWeight)+'%';text($('#traffic-caption'),p.state==='BASELINE'?'Stable baseline · no active candidate':p.state==='COMPLETE'?'Rollout complete · candidate is now stable':`Target: ${p.targetWeight}% canary · replica-based, approximate request share`);}
+ const samples=state.clusterEnabled&&!stale&&coherent&&!pending&&!releasing&&p?.samplesAvailable;
  $('#live-samples').hidden=!samples;
  if(samples){for(const [id,count] of [['stable-samples',p.stableRequests],['canary-samples',p.canaryRequests]]){text($('#'+id),Number(count).toLocaleString());$('#'+id).className=count>=30?'good':'hold';}text($('#sample-window'),'Live rolling 60-second window · read '+new Date(p.capturedAt).toLocaleTimeString());}
  text($('#progress-source'),state.clusterEnabled?'Live cluster · refresh every 4s':'Offline rehearsal');
- text($('#analysis-status'),p?.analysisName&&!stale&&coherent?`Analysis ${p.analysisPhase} · ${p.checksCompleted} / ${p.checksTotal||'unbounded'} checks · ${p.interval||'configured'} interval · ${p.analysisName}`:'');
+ text($('#analysis-status'),p?.analysisName&&!stale&&coherent&&!pending&&!releasing?`Analysis ${p.analysisPhase} · ${p.checksCompleted} / ${p.checksTotal||'unbounded'} checks · ${p.interval||'configured'} interval · ${p.analysisName}`:'');
  const intervalMatch=/^(\d+)(s|m|h)$/.exec(p?.interval||'');
  const estimate=intervalMatch&&p.checksTotal>0?` (about ${Math.round(p.checksTotal*Number(intervalMatch[1])*({s:1,m:60,h:3600}[intervalMatch[2]])/60)} minutes)` : '';
  const budget=p?.checksTotal>0?`${p.checksTotal} HTTP checks at ${p.interval} intervals${estimate}`:'its configured analysis checks';
@@ -158,15 +160,32 @@ $('#revision').addEventListener('change',render);
 $('#release').addEventListener('click',async()=>{
  if(releasing)return;
  releasing=true;render();$('#release-result').hidden=false;text($('#release-result'),'Committing release to Git…');
- try{const result=await api('/release/'+$('#revision').value,'POST');const link=document.createElement('a');link.href=result.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=result.sha.slice(0,8);$('#release-result').replaceChildren(document.createTextNode(result.version+' committed: '),link,document.createTextNode('. Waiting for Argo CD. Run an investigation after the canary is sampled.'));stateGeneration++;state.latest={};progressView=null;progressReceivedAt=0;lastCluster=0;await poll();}
+ try{const result=await api('/release/'+$('#revision').value,'POST');const link=document.createElement('a');link.href=result.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=result.sha.slice(0,8);$('#release-result').replaceChildren(document.createTextNode(result.version+' committed: '),link,document.createTextNode('. Waiting for Argo CD. Run an investigation after the canary is sampled.'));stateGeneration++;state.latest={};state.releaseIntent={version:result.version,releasedAt:result.releasedAt};progressReceivedAt=0;lastCluster=0;render();await poll();}
  catch(e){text($('#release-result'),e.message);}finally{releasing=false;render();}
 });
 $('#approve').addEventListener('click',()=>action(()=>api('/evaluations/'+state.latest.id+'/approve','POST')));
-$('#inject').addEventListener('click',()=>action(()=>api('/fault/25','POST')));$('#clear').addEventListener('click',()=>action(()=>api('/fault/0','POST')));
+let faultUntil=Number(sessionStorage.getItem('canary-fault-until')||0),faultMessage='',faultError=false,faultBusy=false;
+function renderFault(){
+ const remaining=Math.max(0,Math.ceil((faultUntil-Date.now())/1000));
+ const host=$('#fault-result');host.hidden=!faultUntil&&!faultMessage;
+ host.dataset.state=faultError?'error':remaining?'active':'ended';
+ text(host,remaining?`Shared slowdown active · about ${remaining}s remaining. Inventory adds 650 ms per call for both stable and canary. Allow affected requests to appear, then investigate at the ready gate.`:faultMessage||'Slowdown expired. Affected requests can remain in the 60-second observation window; investigate now to capture them, or wait for fresh healthy evidence to show recovery.');
+ $('#inject').classList.toggle('fault-active',remaining>0);
+ text($('#inject'),faultBusy?'Updating dependency fault…':remaining?'Restart 25s shared slowdown':'Inject 25s shared slowdown');
+ $('#inject').disabled=faultBusy;$('#clear').disabled=faultBusy;
+}
+async function setFault(seconds){
+ if(faultBusy)return;faultBusy=true;renderFault();
+ try{await api('/fault/'+seconds,'POST');faultUntil=seconds?Date.now()+seconds*1000:0;sessionStorage.setItem('canary-fault-until',String(faultUntil));faultError=false;faultMessage=seconds?'':'Dependency fault cleared. Allow affected requests to drain from the 60-second window before investigating recovery.';}
+ catch(e){faultError=true;faultMessage='Could not update the dependency fault: '+e.message;faultUntil=0;sessionStorage.removeItem('canary-fault-until');}
+ finally{faultBusy=false;renderFault();}
+}
+$('#inject').addEventListener('click',()=>setFault(25));$('#clear').addEventListener('click',()=>setFault(0));
+renderFault();setInterval(renderFault,1000);
 $('#connect').addEventListener('click',()=>$('#access-dialog').showModal());$('#save-token').addEventListener('click',()=>{const input=$('#token');if(!input.value)return;token=input.value;sessionStorage.setItem('canary-token',token);setTimeout(poll,0);});
 $('#demo-mode').addEventListener('change',()=>{const extended=$('#demo-mode').value==='extended';document.querySelectorAll('.extended').forEach(el=>el.hidden=!extended);if(!extended&&scene==='missing')selectScene('healthy');});
 $('#reset').addEventListener('click',()=>action(async()=>{
- const result=await api('/reset','POST');stateGeneration++;state.latest={};clusterView=null;progressView=null;progressReceivedAt=0;lastCluster=0;
+ const result=await api('/reset','POST');faultUntil=0;faultMessage='';sessionStorage.removeItem('canary-fault-until');renderFault();stateGeneration++;state.latest={};clusterView=null;progressView=null;progressReceivedAt=0;lastCluster=0;
  selectScene('healthy');$('#revision').value='v1';$('#profile').value='development';paused=false;
  text($('#pause-logs'),'Pause updates');$('#release-result').hidden=false;
  text($('#release-result'),result.message||'Reset requested v1 through Git. Wait for canary observations, then run Development investigations at each analysis stage.');
