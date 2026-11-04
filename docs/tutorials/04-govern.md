@@ -15,6 +15,8 @@ The SPA’s expandable **Decision Policy** explanation summarizes these rules. E
 
 ## 1. Demonstrate human-in-the-loop (HITL) approval
 
+Choose **Development / no approval** for the core slowdown/retry flow. Choose **Production / approval** before a fresh investigation when demonstrating human approval. The selection applies to the next investigation; changing the dropdown does not alter a completed or running decision. Repeat the fresh investigation and approval at each Production gate.
+
 This HITL capability already exists. Use it as an **Extended** demonstration after the core shared-slowdown/retry story, so the audience first understands investigation and then sees the authority boundary.
 
 1. At an active analysis gate, wait for the green readiness cue and fresh observations for both revisions.

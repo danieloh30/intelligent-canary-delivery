@@ -1,6 +1,7 @@
 /* Render outside Material's Mermaid shadow roots so diagrams can expand and
    retain the same paper palette in light and dark site modes. */
 (() => {
+  const assetVersion = document.currentScript?.src ? new URL(document.currentScript.src).search : "";
   let sequence = 0;
   let pending = Promise.resolve();
 
@@ -64,7 +65,7 @@
     for (const element of document.querySelectorAll(".workshop-mermaid:not([data-rendered])")) {
       if (!element.isConnected) continue;
       if (element.dataset.diagram && !element.textContent.trim()) {
-        const response = await fetch(`/diagrams/${element.dataset.diagram}.mmd`);
+        const response = await fetch(`/diagrams/${element.dataset.diagram}.mmd${assetVersion}`);
         if (!response.ok) throw new Error("Diagram source unavailable");
         element.textContent = await response.text();
       }

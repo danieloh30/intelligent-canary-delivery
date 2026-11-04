@@ -51,7 +51,7 @@ Open **http://localhost:8095**. Enter **`demo-local`** as the local presenter to
 ## 4. Run your first investigation
 
 1. Select **Healthy release**.
-2. Keep the policy on **Development / automatic**.
+2. Keep the policy on **Development / no approval**.
 3. Select **Run investigation**.
 4. Watch Metrics Analyst run first, Dependency Investigator and Release Analyst run together, and Canary Decision Agent synthesize the findings.
 5. Open **Evidence explorer** to inspect the observation, recommendation, and policy result.

@@ -72,9 +72,9 @@ function renderProgress(){
  const eligible=state.clusterEnabled?!stale&&coherent&&!pending&&p?.connected&&['READY','HOLD'].includes(kind)&&!!p?.ready&&selected:true;
  canInvestigate=eligible&&!busy&&!releasing&&state.latest?.status!=='RUNNING';
  $('#evaluate').disabled=!canInvestigate;
- $('#progress-investigate').hidden=!state.clusterEnabled;
- $('#progress-investigate').disabled=!canInvestigate;
- text($('#progress-investigate'),eligible&&p?`Investigate ${p.revision} at ${p.targetWeight}%`:'Investigate when ready');
+ const waitingLabels={BASELINE:'Release a candidate first',COMPLETE:'Release a new candidate',WARMUP:'Warm-up in progress',COLLECTING:'Waiting for samples',REFRESHING:'Refreshing progress',UNAVAILABLE:'Progress unavailable',RECONCILING:'Waiting for Argo CD',INVESTIGATING:'Agents are running',ADVANCING:'Waiting for next stage',APPROVAL:'Approval required below',INCONCLUSIVE:'Start a fresh release',FAILED:'Review rollout outcome',SELECT_CANDIDATE:'Select the active candidate'};
+ text($('#evaluate'),!state.clusterEnabled?'Run investigation':canInvestigate&&p?`Investigate ${p.revision} at ${p.targetWeight}%`:(waitingLabels[kind]||'Waiting for stage readiness'));
+ text($('#policy-help'),$('#profile').value==='production'?'Production: eligible GO requires human approval. Applies to your next investigation; existing decisions are unchanged.':'Development: eligible GO needs no approval. Applies to your next investigation; starting agents is still manual.');
  $('#evaluate').classList.toggle('investigation-ready',state.clusterEnabled&&canInvestigate);
 }
 async function pollProgress(){
@@ -123,6 +123,7 @@ function render(){
  const canaryActive=!['—',''].includes($('#canary-version').textContent);
  $('#canary-identity').dataset.active=String(canaryActive);
  text($('#canary-description'),canaryActive?'Candidate under evaluation':'No active canary');
+ $('#profile').disabled=busy||releasing||e.status==='RUNNING';
  $('#reset').disabled=state.resetEnabled===false||busy||releasing||e.status==='RUNNING';
  renderProgress();
  $('#release').disabled=!state.releaseEnabled||busy||releasing||e.status==='RUNNING';
@@ -149,10 +150,10 @@ async function poll(){
 }
 async function action(fn){busy=true;$('#evaluate').disabled=true;try{await fn();await poll();}catch(e){notice(e.message);}finally{busy=false;render();}}
 function selectScene(value){scene=value;document.querySelectorAll('[data-scene]').forEach(b=>b.classList.toggle('selected',b.dataset.scene===scene));text($('#scene-question'),stories[scene][0]);text($('#scene-description'),stories[scene][1]);$('#revision').value=scene==='retry'?'v3':'v2';}
-document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;document.querySelectorAll('.tab').forEach(p=>p.classList.toggle('active',p.id===tab));document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b===button));if(tab==='logs')logs();if(tab==='architecture'){if(!window.canaryDiagramsLoaded){window.canaryDiagramsLoaded=true;const script=document.createElement('script');script.src='/diagrams.js';document.body.append(script);}else document.dispatchEvent(new Event('canary-diagrams-visible'));}}));
+document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;document.querySelectorAll('.tab').forEach(p=>p.classList.toggle('active',p.id===tab));document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b===button));if(tab==='logs')logs();if(tab==='architecture'){if(!window.canaryDiagramsLoaded){window.canaryDiagramsLoaded=true;const script=document.createElement('script');script.src='/diagrams.js'+new URL(import.meta.url).search;document.body.append(script);}else document.dispatchEvent(new Event('canary-diagrams-visible'));}}));
 document.querySelectorAll('[data-scene]').forEach(b=>b.addEventListener('click',()=>selectScene(b.dataset.scene)));
 function investigate(){if(!canInvestigate)return;return action(()=>api(`/evaluate?scene=${scene}&profile=${$('#profile').value}&revision=${$('#revision').value}`,'POST'));}
-$('#evaluate').addEventListener('click',investigate);$('#progress-investigate').addEventListener('click',investigate);
+$('#evaluate').addEventListener('click',investigate);$('#profile').addEventListener('change',render);
 $('#revision').addEventListener('change',render);
 $('#release').addEventListener('click',async()=>{
  if(releasing)return;

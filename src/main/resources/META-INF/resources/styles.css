@@ -165,3 +165,18 @@
 @media(max-width:760px){.rollout-progress{padding:12px}.progress-heading{flex-wrap:wrap}.rollout-stages{grid-template-columns:1fr 1fr}.investigation-cue{flex-direction:column;align-items:stretch;padding:12px}.live-samples{grid-template-columns:1fr}.live-samples>div{gap:8px;flex-wrap:wrap}.live-samples p{grid-column:1}}
 
 .policy-summary{margin:12px 0 16px;padding:11px 13px;border:1px solid #d6e1e7;border-radius:5px;background:#fff;font-size:11px;line-height:1.7}.policy-summary summary{cursor:pointer;color:#234f62;font-weight:700}.policy-summary p{margin:10px 0 0}.policy-summary ul{margin:10px 0;padding-left:19px}.policy-summary li{margin:5px 0}
+
+/* One action area: policy and investigation follow the live stage cue. */
+.progress-detail{margin:16px 0;line-height:1.85}
+.policy-summary{margin:20px 0 24px;padding:14px 16px}
+.policy-summary summary{line-height:1.8}
+.investigation-cue{margin-top:20px;align-items:flex-start;padding:20px;gap:22px}
+.investigation-cue>div:first-child{flex:1;min-width:0}
+.investigation-cue strong{display:block;margin-bottom:10px;line-height:1.55}
+.investigation-cue p{margin:0;line-height:1.85}
+.investigation-actions{display:flex;flex-direction:column;gap:12px;flex:0 0 230px;max-width:100%}
+.investigation-actions label{font-size:11px;font-weight:600;line-height:1.6}
+.investigation-actions select{display:block;width:100%;margin-top:7px}
+.investigation-actions small{display:block;font-size:10px;line-height:1.75;color:#526772}
+.investigation-actions button{width:100%;line-height:1.6}
+@media(max-width:760px){.investigation-cue{padding:16px;gap:18px}.investigation-actions{flex-basis:auto;width:100%}}

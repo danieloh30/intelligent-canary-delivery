@@ -160,11 +160,13 @@ If v1 needs recovery, the overview shows **Awaiting baseline**. Wait for the 10%
 
 Release changes immediately invalidate the previous current result. The overview also checks live pod identity, rollout stage, and decision expiry; historical results remain in Evidence explorer instead of appearing as the active verdict. The controller decision endpoint continues returning HOLD until fresh eligible evidence authorizes a rollout.
 
+The dashboard uses versioned application assets and explicit no-store headers for its mutable HTML, scripts, styles, and diagrams. This avoids mixing new HTML with JavaScript/CSS previously cached as immutable for 24 hours. After an upgrade, reload the page once; the versioned URLs bypass legacy asset entries. The policy selector and single investigation action share one readiness area: choose Development / no approval for the core flow, or Production / approval before a fresh investigation for HITL.
+
 ### Follow rollout progress in the SPA
 
 **Release overview → Release progress** displays the configured stage sequence, active canary target, AnalysisRun phase, and completed/configured analysis checks. Live **Stable requests** and **Canary requests** counts cover a rolling 60-second window and refresh every four seconds before any agent investigation. The percentage is a replica-based target, not a measured request share.
 
-A green **Ready to investigate** cue and stage-specific button appear when the current analysis is active and both cohorts have at least 30 observations with complete telemetry. The main investigation button is highlighted too. Warm-up, stale/missing telemetry, a mismatched candidate, active agents, approval, and finished analyses have explicit instructions. A GO at 10% cannot authorize 50%; a fresh ready cue appears at the next gate. An Inconclusive run requires a fresh release/reset.
+A green **Ready to investigate** cue and stage-specific button appear when the current analysis is active and both cohorts have at least 30 observations with complete telemetry. The policy selector and single investigation button are grouped together beside that cue. Warm-up, stale/missing telemetry, a mismatched candidate, active agents, approval, and finished analyses have explicit instructions. A GO at 10% cannot authorize 50%; a fresh ready cue appears at the next gate. An Inconclusive run requires a fresh release/reset.
 
 The **15s pause is a warm-up before analysis**, not the investigation click window. The analysis template polls the saved policy verdict up to 180 times at five-second intervals (roughly 15 minutes plus overhead). Polls do not invoke the LLM. Investigations remain explicitly presenter-triggered for the demo; an automated implementation could trigger one on each gate entry while retaining evidence and policy checks.
 

@@ -94,7 +94,7 @@ Stay in **Release overview → Release progress**. The SPA now shows the complet
 
 1. **10% canary / Warm-up before analysis:** the configured 15-second pause is running. There is no need to click during this pause.
 2. **Waiting for analysis readiness:** the analysis gate is active and the live rolling 60-second sample counts are filling. Check **Stable requests** and **Canary requests** separately; each needs at least **30**.
-3. **Ready to investigate · 10% canary:** the cue turns green, and **Investigate v2 at 10%** becomes available. The lower **Run investigation** button is highlighted too. Select either button to start the Java agents explicitly.
+3. **Ready to investigate · 10% canary:** the cue turns green, and **Investigate v2 at 10%** becomes available. Select the policy beside that button first: **Development / no approval** for the core flow, or **Production / approval** for the Extended HITL demonstration. Then select the single stage-specific button to start the Java agents explicitly. Changing policy afterward does not modify that investigation.
 4. After GO, watch the stage indicator advance to **50% canary**. Wait for the new green cue, then select **Investigate v2 at 50%**. The earlier stage's decision cannot authorize this stage.
 5. Once the final gate passes, the panel reports **Release fully promoted**. The candidate becomes stable.
 
@@ -120,7 +120,7 @@ In the UI:
 
 1. Choose **Shared slowdown** and candidate **v2**.
 2. Select **Inject 25s shared slowdown**.
-3. Select **Development / automatic** policy. Once Release progress shows the green **Ready to investigate** cue, select **Investigate v2 at 10%** or **Run investigation**.
+3. Select **Development / no approval** policy. Once Release progress shows the green **Ready to investigate** cue, select **Investigate v2 at 10%**.
 
 ### Watch the Quarkus Java agents in the SPA
 
@@ -166,7 +166,7 @@ Clear the fault, let affected observations drain from the **60-second window**, 
 
 After the healthy release settles, choose **Hidden retries**, confirm candidate **v3**, and select **Release selected version through Git**.
 
-Watch Release progress for the active analysis gate and the green **Ready to investigate** cue, with at least 30 live observations for both revisions. Select the stage-specific **Investigate v3** action or **Run investigation**, and follow the Java agents in the same SPA views. The optional shell equivalent is `./demo.sh release v3`.
+Watch Release progress for the active analysis gate and the green **Ready to investigate** cue, with at least 30 live observations for both revisions. Select the stage-specific **Investigate v3** action , and follow the Java agents in the same SPA views. The optional shell equivalent is `./demo.sh release v3`.
 
 The expected evidence pattern is:
 

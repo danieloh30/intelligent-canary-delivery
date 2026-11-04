@@ -16,8 +16,8 @@ test('the warm-up is explicit and a persistent ready cue appears at the analysis
  d.step=2;d.state='READY';d.ready=true;
  await expect(page.locator('#progress-title')).toHaveText('Ready to investigate · 10% canary',{timeout:10000});
  await expect(page.locator('#stable-samples')).toHaveText('40');await expect(page.locator('#canary-samples')).toHaveText('35');
- await expect(page.locator('#progress-investigate')).toBeEnabled();expect(d.posts).toEqual([]);
- await page.locator('#progress-investigate').click();expect(d.posts).toHaveLength(1);expect(d.posts[0]).toContain('revision=v2');
+ await expect(page.locator('#evaluate')).toBeEnabled();expect(d.posts).toEqual([]);
+ await page.locator('#evaluate').click();expect(d.posts).toHaveLength(1);expect(d.posts[0]).toContain('revision=v2');
  await expect(page.locator('#evaluate')).toBeDisabled();
 });
 
@@ -29,7 +29,7 @@ test('counts are live before the first investigation and readiness returns at fi
  await expect(page.locator('#evaluate')).toBeEnabled();expect(d.posts).toEqual([]);
  d.step=5;d.weight=50;
  await expect(page.locator('#progress-title')).toHaveText('Ready to investigate · 50% canary',{timeout:10000});
- await expect(page.locator('#progress-investigate')).toHaveText('Investigate v2 at 50%');
+ await expect(page.locator('#evaluate')).toHaveText('Investigate v2 at 50%');
  await expect(page.locator('#rollout-stages .active')).toHaveText('50% canary');
  await expect(page.locator('#traffic-caption')).toContainText('Target: 50% canary');
 });
@@ -51,7 +51,7 @@ test('stale or unavailable progress and wrong candidate selection disable the in
 
 test('live progress and the investigate cue fit a mobile viewport',async({page})=>{
  await page.setViewportSize({width:390,height:844});await setup(page);await page.goto('/');
- await expect(page.locator('#progress-investigate')).toBeEnabled();
+ await expect(page.locator('#evaluate')).toBeEnabled();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
 });
 
@@ -61,6 +61,11 @@ test('Decision Policy explanation exposes safety requirements and existing HITL 
  await expect(policy).toContainText('30 requests per revision');await expect(policy).toContainText('120-second expiry');
  await expect(policy).toContainText('limitations remain unresolved');await expect(policy).toContainText('error and latency safety limits');
  await expect(policy).toContainText('human approval (HITL)');await expect(policy).toContainText('cannot override');
+ await expect(page.locator('.investigation-actions #profile')).toHaveValue('development');
+ await expect(page.locator('#policy-help')).toContainText('eligible GO needs no approval');
+ await page.locator('#profile').selectOption('production');await expect(page.locator('#policy-help')).toContainText('requires human approval');
+ await expect(page.locator('#policy-help')).toContainText('existing decisions are unchanged');
+ await expect(page.locator('#evaluate')).toHaveCount(1);await expect(page.locator('#progress-investigate')).toHaveCount(0);
 });
 
 test('presenter guide explains manual gates, the analysis budget, and Extended HITL',async({page})=>{
