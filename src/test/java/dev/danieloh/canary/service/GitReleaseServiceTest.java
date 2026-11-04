@@ -23,7 +23,9 @@ class GitReleaseServiceTest {
     @Test void deniedGitHubAccessDoesNotLeakResponseOrCredential() throws Exception {
         exercise(403);
     }
-    void exercise(int status) throws Exception {
+    @Test void refreshFailureKeepsTheSuccessfulCommitAndReportsFallback() throws Exception {exercise(200,false);}
+    void exercise(int status) throws Exception {exercise(status,true);}
+    void exercise(int status,boolean refreshAllowed) throws Exception {
         var json=new ObjectMapper();
         String original=Files.readString(Path.of("deploy/gitops/rollout.yaml"));
         var put=new AtomicReference<JsonNode>();
@@ -43,7 +45,10 @@ class GitReleaseServiceTest {
         });
         server.start();
         try {
-            var service=new GitReleaseService();service.json=json;service.store=new DemoStore();service.apiUrl=endpoint;
+            var refreshes=new java.util.concurrent.atomic.AtomicInteger();
+            var service=new GitReleaseService();service.cluster=new ClusterService(){
+                @Override public boolean requestReleaseRefresh(){assertNotNull(put.get());assertNotNull(service.store.releaseIntent());refreshes.incrementAndGet();return refreshAllowed;}
+            };service.json=json;service.store=new DemoStore();service.apiUrl=endpoint;
             service.repository="demo/repository";service.branch="main";service.token=Optional.of("test-credential");
             service.role="control";service.mode="live";service.releaseEnabled=true;
             assertThrows(jakarta.ws.rs.BadRequestException.class,()->service.release("v4"));
@@ -55,6 +60,7 @@ class GitReleaseServiceTest {
                 var previous=new dev.danieloh.canary.model.Evaluation(RehearsalEvidence.forScene("healthy"),"development","fixture");
                 previous.status="COMPLETE";service.store.add(previous);
                 var result=service.release("v2");assertEquals("new-commit",result.get("sha"));
+                assertEquals(Boolean.toString(refreshAllowed),result.get("refreshRequested"));assertEquals(1,refreshes.get());
                 assertNull(service.store.latest());assertSame(previous,service.store.require(previous.id));
                 assertEquals("v2",service.store.releaseIntent().version());
                 assertEquals("https://github.com/demo/repository/commit/new-commit",result.get("url"));
@@ -71,7 +77,7 @@ class GitReleaseServiceTest {
                 assertEquals(2,stages);assertEquals(expected,manifest);
             } else {
                 var error=status==409?assertThrows(ClientErrorException.class,()->service.release("v3")):assertThrows(ServiceUnavailableException.class,()->service.release("v3"));
-                assertFalse(error.getMessage().contains("upstream-secret"));assertFalse(error.getMessage().contains("test-credential"));
+                assertEquals(0,refreshes.get());assertFalse(error.getMessage().contains("upstream-secret"));assertFalse(error.getMessage().contains("test-credential"));
             }
         } finally {server.stop(0);}
     }

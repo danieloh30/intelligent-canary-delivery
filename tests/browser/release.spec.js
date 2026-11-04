@@ -38,3 +38,13 @@ test('an active investigation disables the release action',async({page})=>{
  await page.goto('/');await expect(page.locator('#release-help')).toContainText('Commits the rollout');
  await expect(page.locator('#release')).toBeDisabled();
 });
+
+for(const refreshed of [true,false])test(`Git release reports immediate refresh ${refreshed?'handoff':'fallback'} without duplicate commits`,async({page})=>{
+ let posts=0;await page.route('**/api/state',r=>r.fulfill({json:{mode:'live',clusterEnabled:true,releaseEnabled:true,latest:{},events:[]}}));
+ await page.route('**/api/cluster',r=>r.fulfill({json:{connected:true,candidateVersion:'v2',stableVersion:'v1',rollout:{status:{phase:'Healthy'}}}}));
+ await page.route('**/api/release/v2',r=>{posts++;return r.fulfill({json:{version:'v2',sha:'abc123456789',url:'https://github.com/demo/repo/commit/abc123',releasedAt:new Date().toISOString(),refreshRequested:String(refreshed)}});});
+ await page.goto('/');await page.locator('#release').click();
+ await expect(page.locator('#release-result')).toContainText(refreshed?'Immediate Argo CD refresh requested':'Git commit succeeded, but immediate Argo CD refresh was unavailable');
+ if(!refreshed)await expect(page.locator('#release-result')).toContainText('do not release again just to refresh');
+ expect(posts).toBe(1);
+});

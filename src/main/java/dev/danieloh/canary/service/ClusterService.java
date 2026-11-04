@@ -92,6 +92,20 @@ public class ClusterService {
         if(response.statusCode()!=200)throw new IllegalStateException("Upstream returned "+response.statusCode());
         return response.body();
     }
+    /** Presenter release handoff only: refresh one Application; never patch rollout or analysis state. */
+    public boolean requestReleaseRefresh() {
+        if(!enabled)return false;
+        try {
+            kube.genericKubernetesResources(context("applications","Application"))
+                .inNamespace(gitopsNamespace).withName("canary-checkout")
+                .patch(io.fabric8.kubernetes.client.dsl.base.PatchContext.of(io.fabric8.kubernetes.client.dsl.base.PatchType.JSON_MERGE),
+                    "{\"metadata\":{\"annotations\":{\"argocd.argoproj.io/refresh\":\"hard\"}}}");
+            return true;
+        } catch(Exception ex) {
+            org.jboss.logging.Logger.getLogger(ClusterService.class).warn("Git release committed, but Argo CD refresh request failed; automatic reconciliation remains available");
+            return false;
+        }
+    }
     public void fault(int seconds) {
         if(!enabled)throw new jakarta.ws.rs.ClientErrorException("Cluster is disabled",409);
         try {request("http://inventory:8080/internal/fault/"+seconds,"POST");}

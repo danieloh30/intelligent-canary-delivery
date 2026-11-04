@@ -75,6 +75,10 @@ test('presenter guide explains manual gates, the analysis budget, and Extended H
  await expect(guide).toContainText('30 live requests in BOTH');await expect(guide).toContainText('run a fresh investigation');
  await expect(guide).toContainText('Production / approval');await expect(guide).toContainText('Approve promotion');
  await expect(guide).toContainText('DecisionPolicy.java');await expect(guide).toContainText('presenter-triggered');
+ await expect(guide).toContainText('avoid incorrect release attribution');await expect(guide).toContainText('1,400');await expect(guide).toContainText('1,000 checkouts/second');
+ await expect(guide).toContainText('immediate Argo CD refresh');
+ await guide.locator('.enterprise-context').screenshot({path:'/tmp/canary-enterprise-guide.png'});
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
 });
 
 

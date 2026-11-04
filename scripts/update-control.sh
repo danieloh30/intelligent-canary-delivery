@@ -5,6 +5,7 @@ NS=${DEMO_NAMESPACE:-canary-demo}
 for tool in oc python3; do command -v "$tool" >/dev/null || { echo "Missing $tool" >&2; exit 1; }; done
 oc -n "$NS" get deployment canary-control >/dev/null
 oc -n "$NS" get buildconfig canary-demo >/dev/null
+bash scripts/configure-release-refresh.sh
 work=$(mktemp -d)
 chmod 700 "$work"
 trap 'rm -rf "$work"' EXIT

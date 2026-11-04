@@ -10,7 +10,7 @@ All presenter and internal evidence endpoints require `Authorization: Bearer TOK
 | GET | `/api/progress` | Read live stage, analysis check budget, per-cohort counts, and investigation readiness without starting agents |
 | GET | `/api/cluster` | Rollout and Argo CD Application status |
 | POST | `/api/reset` | Clear faults and current presentation; restore v1 through Git when needed, preserving gates |
-| POST | `/api/release/{version}` | Commit v1/v2/v3 to GitHub; return version, SHA, and commit URL |
+| POST | `/api/release/{version}` | Commit v1/v2/v3 to GitHub, request immediate Argo CD refresh; return version, SHA, commit URL, release identity, and refresh status |
 | POST | `/api/evaluate` | Start an investigation |
 | GET | `/api/evaluations/{id}` | Inspect one investigation |
 | POST | `/api/evaluations/{id}/approve` | Approve an eligible pending production decision |
@@ -19,6 +19,8 @@ All presenter and internal evidence endpoints require `Authorization: Bearer TOK
 | GET | `/api/analysis?revision=v2` | Return the effective verdict for Argo analysis |
 
 Reset and release actions reject concurrent investigations. A reset on an already Healthy stable v1 does not create a new rollout. Offline reset does not touch Git or Kubernetes. `/api/state` includes `resetEnabled` and `releaseIntent`; `/api/cluster` includes actual `stableVersion` and `candidateVersion` labels. The empty initial decision is not a GO: `/api/analysis` remains HOLD until eligible fresh evidence exists.
+
+Dashboard release responses include `refreshRequested` as the string `"true"` or `"false"`. The server requests a hard refresh of the named `canary-checkout` Application only after Git accepts the commit. A failed refresh does not roll back or invalidate that commit; the response reports the automatic-sync fallback. The control service needs its existing Application read permission plus the named-Application patch Role installed by `scripts/configure-release-refresh.sh`. This presenter action is not an agent tool, does not patch the Rollout, and does not bypass analysis or approval gates.
 
 ## Start an investigation
 

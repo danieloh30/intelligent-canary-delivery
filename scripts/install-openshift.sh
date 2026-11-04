@@ -138,6 +138,7 @@ p=Path(os.environ['PLATFORM_FILE'])
 p.write_text(p.read_text().replace('image-registry.openshift-image-registry.svc:5000/canary-demo/canary-demo:latest',os.environ['IMAGE_REF']))
 PYCODE
 oc -n "$NS" apply -k "$work/openshift"
+bash scripts/configure-release-refresh.sh
 # Permit bounded Argo CD status/log reads; this does not grant deployment writes.
 cat <<YAML | oc apply -f -
 apiVersion: rbac.authorization.k8s.io/v1

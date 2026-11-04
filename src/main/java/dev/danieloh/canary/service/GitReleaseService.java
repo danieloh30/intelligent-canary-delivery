@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 
-/** Presenter-only Git writes. Never exposed as an agent tool or Kubernetes write. */
+/** Presenter-only Git writes and bounded Application refresh. Never exposed as an agent tool. */
 @ApplicationScoped
 public class GitReleaseService {
     static final String PATH = "deploy/gitops/rollout.yaml";
@@ -73,8 +73,9 @@ public class GitReleaseService {
             String sha=result.getCommit().getSHA1();
             String url="https://github.com/"+repository+"/commit/"+sha;
             store.released(version,releasedAt.toString(),false);
-            store.event("presenter","Released "+version+" through Git: "+sha+". Waiting for Argo CD reconciliation; run an investigation after canary observations arrive.");
-            return Map.of("version",version,"sha",sha,"url",url,"releasedAt",releasedAt.toString());
+            boolean refreshed=cluster.requestReleaseRefresh();
+            store.event("presenter","Released "+version+" through Git: "+sha+(refreshed?". Immediate Argo CD refresh requested.":". Immediate refresh unavailable; waiting for automatic reconciliation.")+" Run an investigation after canary observations arrive.");
+            return Map.of("version",version,"sha",sha,"url",url,"releasedAt",releasedAt.toString(),"refreshRequested",Boolean.toString(refreshed));
         } catch(HttpException ex) {
             if(ex.getResponseCode()==409 || ex.getResponseCode()==422)
                 throw new ClientErrorException("Git changed or branch rules rejected the commit. Refresh and check the repository before retrying.",409);

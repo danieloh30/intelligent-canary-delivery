@@ -122,7 +122,7 @@ The script:
 3. Creates the dedicated `canary-demo` namespace and a cluster-scoped RolloutManager in `openshift-gitops` when none exists. A new operator subscription configures those two namespaces; existing installations retain their configuration and need compatible controller scope.
 4. Stores the model key and a generated presenter token in a namespace Secret, through private temporary files.
 5. Builds the Java application in the cluster using a binary Docker build. Only Dockerfile, pom.xml, and src enter the portable GNU-format build archive. Python creates it without macOS extended-attribute headers.
-6. Pins the cluster build digest, then deploys workloads, the reasoning service, read-only observer RBAC, Prometheus, Jaeger, and an HTTPS Route.
+6. Pins the cluster build digest, then deploys workloads, the reasoning service, read-only observer RBAC, a named-Application refresh permission for presenter releases, Prometheus, Jaeger, and an HTTPS Route.
 7. Creates an Argo CD Application owning the checkout Rollout and shared AnalysisTemplate. Platform resources are installer-owned; release resources are Git-owned. The Application applies an immutable image-digest override to the release manifests.
 
 The script is rerunnable and reuses the presenter token. It does not uninstall existing operators or delete namespaces. A rerun builds the latest local source and updates the immutable image digest. Before a presentation, avoid rebuilding once baseline and candidate behavior have been verified.
@@ -177,6 +177,10 @@ Authenticated **GET /api/progress** uses the existing Quarkus REST/Jackson and K
 ## Present the demo
 
 Select **Core** or **Extended** in the SPA. Extended reveals Missing evidence; both modes support the governance walkthrough. There is no presentation timer, and the mode does not change agent behavior or safety policy.
+
+The investigation tutorial and SPA Presenter guide include enterprise examples and talk tracks: shared database degradation motivates HOLD without assuming the release caused it; candidate-specific retry amplification motivates NO-GO even with successful HTTP responses. They identify the evidence to show and distinguish the agent rationale, effective Decision Policy result, and Argo outcome.
+
+Dashboard releases request a one-shot Argo CD hard refresh after the Git commit, avoiding the normal polling wait. The Kubernetes Client patches only the refresh annotation on `canary-checkout`; a named-Application Role is installed by `scripts/configure-release-refresh.sh` during install/control updates. This is presenter orchestration, not an agent tool or a Rollout write. Refresh failure preserves the successful commit and reports the automatic-sync fallback. Pod startup, evidence sampling, LLM execution, and recovery windows still take time; no gate is bypassed. [Argo CD refresh annotation](https://argo-cd.readthedocs.io/en/stable/user-guide/annotations-and-labels/).
 
 ### Core: 10 minutes
 

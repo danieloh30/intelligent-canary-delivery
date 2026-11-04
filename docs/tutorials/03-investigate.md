@@ -85,7 +85,10 @@ The inventory fault is deliberately controlled. It makes the pattern reproducibl
 
 In the dashboard, choose **Shared slowdown**, confirm **Candidate version → v2**, and select **Release selected version through Git**. Follow the returned commit link to inspect the release diff.
 
-The server commits the version, fresh release annotation, and analysis arguments in `deploy/gitops/rollout.yaml` to the configured GitHub branch. Argo CD reconciles that commit. Selecting a candidate or scenario alone does not deploy it. After a new release is accepted, previous stage highlights clear while the SPA waits for GitOps reconciliation; the new 10% stage appears after the controllers observe the commit.
+The server commits the version, fresh release annotation, and analysis arguments in `deploy/gitops/rollout.yaml` to the configured GitHub branch, then requests an immediate Argo CD Application refresh. Argo CD discovers and reconciles the Git commit; the release API never patches the Rollout or skips an analysis gate. Selecting a candidate or scenario alone does not deploy it. After a new release is accepted, previous stage highlights clear while the SPA waits for GitOps reconciliation; the new 10% stage appears after the controllers observe the commit.
+
+!!! tip "Reduce live-demo waiting"
+    A successful dashboard release reports **Immediate Argo CD refresh requested**. Stay in the SPA while controller reconciliation, pod startup, and request sampling complete; a ten-second rollout is not guaranteed. The four-second SPA telemetry refresh is separate from Git discovery. If the refresh request fails, the Git commit remains successful and the SPA explains the automatic-sync fallback. Do not create another release just to refresh. Without a refresh request or webhook, Argo CD's documented default Git polling interval is 120 seconds plus up to 60 seconds of jitter; see the [Argo CD FAQ](https://argo-cd.readthedocs.io/en/stable/faq/#how-often-does-argo-cd-check-for-changes-to-my-git-or-helm-repository). Shell releases use normal Git discovery unless you request a refresh separately.
 
 !!! note "Enable dashboard releases before presenting"
     Configure the server GitHub credential using the [cluster setup instructions](02-cluster.md#enable-releases-from-the-dashboard). Without it, the release button stays disabled and explains the shell alternative: `./demo.sh release v2`. The shell command requires a clean working tree; the dashboard writes directly to GitHub. Run `git pull --ff-only` before later editing or releasing from your local checkout.
@@ -139,6 +142,19 @@ During the affected-window wait, switch to the prepared Prometheus tab and compa
 
 The appropriate initial result is **HOLD**. A known dependency cause does not make ongoing customer degradation safe.
 
+### Enterprise context: avoid incorrect release attribution
+
+**Illustrative case:** a retailer releases a new checkout version while its shared inventory database develops contention. Both stable and canary become slow. A similar pattern can arise from a degraded identity provider, shared network path, or downstream API.
+
+A fixed 500 ms limit detects customer degradation but cannot establish whether the candidate caused it. Comparing both cohorts helps distinguish shared conditions from a candidate-specific regression. Similar latency is evidence consistent with a shared issue, not proof of root cause; inspect dependency observations, release context, and limitations. Google describes how shared backends and failure domains complicate canary evaluation in [Canarying Releases](https://sre.google/workbook/canarying-releases/).
+
+**Show the audience:** open **Evidence explorer → Stable and canary** and compare p95 in the same frozen window. Then show **Dependency Investigator**, its evidence references and limitations, and **Recommendation → Decision Policy**. Read the actual policy reason: HOLD for unresolved limitations is different from a confirmed shared-cause finding. Live LLM output can vary; if it returns NO-GO, show the saved explanation rather than claiming the intended HOLD occurred.
+
+**Presenter line:** “Customers are slow on both revisions. We hold exposure, investigate the shared dependency, and require fresh healthy evidence before increasing traffic.” The enterprise value is avoiding an unsupported rollback diagnosis while retaining a safety stop. HOLD does not mean that ongoing degradation is acceptable.
+
+**Use the recovery wait:** explain the frozen evidence and specialist findings while affected requests drain from the rolling 60-second window. The injected fault lasts 25 seconds; checkout logs return to normal after expiry, while slow observations can remain in the evidence window. Reinvestigate recovery at 10%, then use a fresh investigation at 50%.
+
+
 <figure markdown>
 
 [![Local rehearsal showing a shared slowdown and an effective HOLD decision](../images/screenshots/02-shared-hold.png)](../images/screenshots/02-shared-hold.png)
@@ -176,6 +192,19 @@ The expected evidence pattern is:
 - Trace-linked observations and logs show repeated attempts for the candidate.
 
 The specialists retrieve metrics, request observations, retry records, release metadata, and operational guidance. The decision agent should recommend **NO-GO** for the canary-specific regression. Inspect the actual evidence and response rather than assuming the model will always produce the desired answer.
+
+### Enterprise context: expose successful requests that amplify dependency load
+
+**Illustrative case:** a new SDK or retry configuration causes repeated inventory API calls before a checkout eventually succeeds. Customer HTTP success and latency can look healthy while the candidate consumes extra downstream connections, CPU, capacity, or API quota. Amazon explains how retries can amplify load and worsen an overloaded dependency in [Timeouts, retries, and backoff with jitter](https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/).
+
+In this demo, stable uses **one inventory attempt per checkout**; v3 receives four retryable failures before succeeding on its **fifth attempt**. This is dependency work per business operation, not an unusually large customer request count. At a hypothetical 1,000 checkouts/second, full v3 adoption would produce about 5,000 inventory attempts/second instead of 1,000. If exactly 10% of those checkouts used v3, total attempts would already rise to about 1,400/second. These are illustrative calculations, not measured cluster throughput; the demo's traffic split is approximate.
+
+**Show the audience:** in **Evidence explorer**, compare **Inventory attempts / checkout** across stable and canary. Show the **Dependency Investigator** retry evidence, **Release Analyst** runbook context, then the recommendation summary explaining NO-GO. The policy reason may simply say the recommendation was accepted; the detailed rationale is in the agent recommendation and specialist findings.
+
+**Presenter line:** “The HTTP response succeeds, but each checkout makes five times the inventory calls. Increasing traffic would spread that regression, so we stop the candidate before capacity is exhausted.” Valid retries are not inherently a defect; the concern is evidence-backed candidate-specific amplification. The 30-request minimum is an evidence prerequisite, not a retry limit. Live agents interpret the evidence; the deterministic rehearsal uses a fixture rule and does not imply a hard production retry threshold in Decision Policy.
+
+Together, scenario 02 demonstrates **avoiding incorrect release attribution**, while scenario 03 demonstrates **detecting a regression that basic HTTP checks miss**. Inspect the actual recommendation, effective policy decision, and controller outcome separately.
+
 
 <figure markdown>
 
