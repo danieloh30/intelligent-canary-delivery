@@ -129,7 +129,7 @@ A release starts GitOps reconciliation. The four Java agents start when you sele
 - **Release overview:** follow the four agent cards and **Decision activity** for orchestrator events, evidence tool reads, and the policy verdict. The SPA polls activity every two seconds; short states can pass between updates.
 - **Live console → Agent activity:** follow the same bounded event history as text.
 - **Live console → Quarkus control plane:** inspect actual Java pod logs, refreshed every four seconds. Switch to **Argo Rollouts controller** or **Argo CD controller** to follow deployment actions.
-- **Evidence explorer:** after completion, inspect the three specialist findings, final recommendation, frozen evidence, and independent Decision Policy result.
+- **Evidence explorer:** compare stable and canary request counts, p95, errors, and inventory attempts in the frozen window. Read the calculated context, then each specialist’s summary, recorded tool reads, evidence references, and limitations. Compare the agent recommendation with the effective Decision Policy result and its reason. Expand the raw observation, recommendation, and policy records for deeper inspection. Expired or historical decisions are labeled; recent request samples are only a subset of the aggregate window. Reloading retains the selected page and scenario in the same browser tab.
 
 The agents execute in one Quarkus service: Metrics Analyst first, Dependency Investigator and Release Analyst concurrently, then Canary Decision Agent. Tool reads appear during execution; specialist findings are published when the workflow completes. These views expose recorded activity and structured outputs, not private model reasoning.
 

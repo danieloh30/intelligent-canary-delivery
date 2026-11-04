@@ -113,7 +113,7 @@ function render(){
  text($('#source'),evidence?'Previous investigation · retained in Evidence explorer':'No observation captured');
  text($('#evaluation-id'),evidence?e.id+' · historical result':'Release-bound decisions expire after 120 seconds.');
  $('#approve').hidden=true;
- if(!evidence){$('#evidence-content').replaceChildren();text($('#evidence-content'),'No current investigation. Release a candidate and run an investigation to inspect its evidence.');}
+ if(!evidence){evidenceRenderKey='';$('#evidence-content').replaceChildren();text($('#evidence-content'),'No current investigation. Release a candidate and run an investigation to inspect its evidence.');}
  if(!state.clusterEnabled){text($('#stable-version'),'v1');text($('#canary-version'),'—');}
  }
  if(state.clusterEnabled){
@@ -135,11 +135,61 @@ function render(){
  });
  if(tab==='logs'&&$('#log-source').value==='agents'&&!paused)text($('#console'),(state.events||[]).map(x=>`${x.at} [${x.actor}] ${x.message}`).join('\n')||'Ready. Run an investigation to follow agent activity.');
 }
+let evidenceRenderKey='';
+function evidenceNode(tag,cls,value){const el=document.createElement(tag);if(cls)el.className=cls;if(value!==undefined)el.textContent=value;return el;}
+function highlightFinding(el,value){
+ const parts=String(value||'').split(/(\bsignificantly (?:lower|higher|faster|slower)\b|\b(?:low|high|higher|lower|elevated) latenc(?:y|ies)\b|\bno retr(?:y|ies)\b|\bretry amplification\b|\b(?:no |unresolved )?missing evidence\b|\bunresolved limitations\b|\bshared (?:slowdown|degradation|dependency)\b|\bno error(?:s| rates)?\b|\b(?:NO_GO|NO-GO|HOLD|GO)\b)/gi);
+ el.replaceChildren();parts.forEach((part,i)=>el.append(i%2?evidenceNode('mark','evidence-keyword',part):document.createTextNode(part)));return el;
+}
+function evidenceList(parent,title,items){parent.append(evidenceNode('h4','',title));const list=evidenceNode('ul','evidence-list');for(const item of items)list.append(evidenceNode('li','',item));parent.append(list);}
 function renderEvidence(e){
+ const v=e.evidence,expired=!!e.decision&&Date.parse(e.decision.expiresAt)<=Date.now(),current=evidenceCurrent(e);
+ const key=JSON.stringify([e,expired,current]);if(key===evidenceRenderKey)return;evidenceRenderKey=key;
  const host=$('#evidence-content');host.replaceChildren();
- const blocks=[['Observation window',JSON.stringify(e.evidence,null,2)],['Agent recommendation',JSON.stringify(e.recommendation||{status:e.status},null,2)],['Decision Policy',JSON.stringify(e.decision||{status:'Pending'},null,2)]];
- for(const [name,f]of Object.entries(e.findings||{})){const section=document.createElement('section');section.className='finding';const h=document.createElement('h3');h.textContent=names[name];const p=document.createElement('p');p.textContent=f.summary;section.append(h,p);host.append(section);}
- for(const [title,body]of blocks){const section=document.createElement('section');section.className='evidence-block';const h=document.createElement('h3');h.textContent=title;const pre=document.createElement('pre');pre.textContent=body;section.append(h,pre);host.append(section);}
+ const num=n=>Number.isFinite(Number(n))?Number(n).toFixed(2):'Unavailable';
+ const pct=n=>Number.isFinite(Number(n))?(Number(n)*100).toFixed(2)+'%':'Unavailable';
+ const stable=v.stable||{},canary=v.canary||{},traces=v.traces||[],missing=v.missing||[];
+ const snapshot=evidenceNode('section','evidence-snapshot');snapshot.append(evidenceNode('span','eyebrow','FROZEN INVESTIGATION EVIDENCE'),evidenceNode('h3','',`Candidate ${v.revision} · rollout step ${v.rolloutStep}`));
+ snapshot.append(evidenceNode('p','',`Captured ${new Date(v.capturedAt).toLocaleString()} · ${v.source}. These observations do not update as traffic recovers. Run another investigation to capture a new window.`));
+ snapshot.append(evidenceNode('p','mono',`Investigation ${e.id} · stable identity ${v.stableRevision}`));
+ snapshot.append(evidenceNode('p',expired||!current?'hold':'good',expired?'Decision expired — retained for inspection; fresh evidence is required for a new decision.':!current?'Historical investigation — this snapshot does not authorize the current rollout stage.':e.decision?`Decision freshness deadline: ${new Date(e.decision.expiresAt).toLocaleTimeString()} (120 seconds from capture).`:'Investigation in progress — findings appear as the agents finish.'));
+ host.append(snapshot);
+ const decision=evidenceNode('section','evidence-decision');decision.append(evidenceNode('h3','','Recommendation → Decision Policy'));
+ decision.append(evidenceNode('p','',`Agent recommendation: ${e.recommendation?.verdict||'Pending'} → effective decision: ${e.decision?.effective||'Pending'}${expired?' (expired)':''}.`));
+ decision.append(highlightFinding(evidenceNode('p'),e.recommendation?.summary||'The decision agent has not returned a recommendation yet.'));
+ decision.append(evidenceNode('p','',`Policy reason: ${e.decision?.reason||'Awaiting Decision Policy validation'}`));
+ decision.append(evidenceNode('p','muted',`Policy: ${e.decision?.policy||e.profile||'Unknown'} · human approval ${e.decision?.approvalRequired?'required':e.decision?'not required by this decision':'not assessed'}. Saved policy output is authoritative; the comparisons below explain the evidence.`));
+ if(e.recommendation)evidenceList(decision,'Recommendation limitations',e.recommendation.limitations?.length?e.recommendation.limitations:['No limitations reported by the decision agent; this is not a guarantee that evidence is complete.']);
+ host.append(decision);
+ const comparison=evidenceNode('section','evidence-comparison');comparison.append(evidenceNode('h3','','Stable and canary · same frozen window'));
+ const scroll=evidenceNode('div','evidence-table-wrap'),table=evidenceNode('table','evidence-table');const caption=evidenceNode('caption','','Compare request health and dependency work before assigning the cause to the release.');table.append(caption);
+ const head=evidenceNode('thead'),hr=evidenceNode('tr');for(const title of ['Signal','Stable','Canary','Interpretation'])hr.append(evidenceNode('th','',title));head.append(hr);table.append(head);
+ const body=evidenceNode('tbody');
+ const delta=Number(canary.p95Ms)-Number(stable.p95Ms);
+ const rows=[['Requests',stable.requests??'Unavailable',canary.requests??'Unavailable',stable.requests>=30&&canary.requests>=30?'Both cohorts meet the 30-request minimum.':'Insufficient observations: both cohorts need at least 30 requests.'],['p95 latency',num(stable.p95Ms)+' ms',num(canary.p95Ms)+' ms',`${delta>=0?'+':''}${num(delta)} ms canary minus stable. Canary GO safety limit: 500 ms.`],['Error rate',pct(stable.errorRate),pct(canary.errorRate),'Canary GO safety limit: 1%; the hard error cap is 10%.'],['Inventory attempts / checkout',num(stable.attemptsPerCheckout)+'×',num(canary.attemptsPerCheckout)+'×','Extra attempts reveal dependency work even when HTTP requests succeed.']];
+ for(const row of rows){const tr=evidenceNode('tr');row.forEach((value,i)=>tr.append(evidenceNode(i===0?'th':'td','',value)));body.append(tr);}table.append(body);scroll.append(table);comparison.append(scroll);
+ const context=[];
+ if(stable.requests>=30&&canary.requests>=30){
+ if(stable.p95Ms>500&&canary.p95Ms>500)context.push('Both cohorts exceed 500 ms. This is consistent with shared degradation; it does not by itself prove that the release caused the slowdown. Inspect dependency findings and limitations.');
+ else if(canary.p95Ms>500)context.push('Canary exceeds 500 ms while stable does not. Investigate a candidate-specific regression before promotion.');
+ else context.push('Both p95 values are below 500 ms. A relative latency increase alone is not an absolute safety-limit breach; inspect errors, retries, and limitations as well.');
+ if(canary.attemptsPerCheckout>stable.attemptsPerCheckout)context.push('Canary uses more inventory attempts per checkout than stable. Successful responses can conceal retry amplification.');
+ }
+ context.push(missing.length?'Evidence gaps are recorded below; missing evidence withholds GO.':'No collection gaps were recorded. Agent-reported limitations are separate and can still withhold GO.');
+ evidenceList(comparison,'Snapshot context · calculated from captured signals',context);host.append(comparison);
+ const roles={metrics:['Compare aggregate request counts, latency, errors, and dependency attempts.',['metrics-tool']],dependency:['Inspect the sampled requests and logs for shared dependency behavior and retry amplification.',['trace-tool','log-tool']],release:['Check release metadata, runbook prerequisites, and evidence completeness.',['release-tool','runbook-tool']]};
+ for(const name of ['metrics','dependency','release']){
+ const f=e.findings?.[name],section=evidenceNode('section','finding evidence-specialist');section.dataset.agent=name;
+ section.append(evidenceNode('span','eyebrow','SPECIALIST FINDING'),evidenceNode('h3','',names[name]),evidenceNode('p','muted',roles[name][0]),highlightFinding(evidenceNode('p','agent-summary'),f?.summary||'This specialist has not returned a finding yet.'));
+ evidenceList(section,'Recorded tool reads',roles[name][1].map(tool=>`${tool}: ${(e.toolReads||[]).includes(tool)?'read this frozen investigation':'no read recorded'}`));
+ evidenceList(section,'Evidence references',f?.evidenceIds?.length?f.evidenceIds.map(id=>`${id}${id===v.id?' · matches this snapshot':' · does not match this snapshot'}`):['No evidence references returned yet.']);
+ evidenceList(section,'Limitations',f?.limitations?.length?f.limitations:[f?'No limitations reported by this specialist.':'Not assessed yet.']);
+ if(name==='dependency')section.append(evidenceNode('p','muted',`${traces.length} sampled request observations and ${(v.logs||[]).length} trace-linked log entries. Recent samples are a subset of the rolling window; their latency can differ from the aggregate p95. These are checkout request observations, not a complete distributed trace graph.`));
+ if(name==='release')section.append(evidenceNode('p','',`Release notes: ${v.releaseNotes||'Not available'}. Collection gaps: ${missing.length?missing.join('; '):'none recorded'}.`));
+ host.append(section);
+ }
+ const raw=evidenceNode('section','evidence-raw');raw.append(evidenceNode('h3','','Inspect the underlying record'));
+ for(const [title,value]of [['Observation window · signals, sampled requests and logs',v],['Agent recommendation',e.recommendation||{status:e.status}],['Decision Policy',e.decision||{status:'Pending'}]]){const details=evidenceNode('details','evidence-block');details.append(evidenceNode('summary','',title),evidenceNode('pre','',JSON.stringify(value,null,2)));raw.append(details);}host.append(raw);
 }
 async function poll(){
  const generation=stateGeneration;
@@ -151,8 +201,8 @@ async function poll(){
  }catch(e){if(state.clusterEnabled){clusterView={connected:false};rolloutPhase('Unavailable');render();}notice(e.message);}
 }
 async function action(fn){busy=true;$('#evaluate').disabled=true;try{await fn();await poll();}catch(e){notice(e.message);}finally{busy=false;render();}}
-function selectScene(value){scene=value;document.querySelectorAll('[data-scene]').forEach(b=>b.classList.toggle('selected',b.dataset.scene===scene));text($('#scene-question'),stories[scene][0]);text($('#scene-description'),stories[scene][1]);$('#revision').value=scene==='retry'?'v3':'v2';}
-document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;document.querySelectorAll('.tab').forEach(p=>p.classList.toggle('active',p.id===tab));document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b===button));if(tab==='logs')logs();if(tab==='architecture'){if(!window.canaryDiagramsLoaded){window.canaryDiagramsLoaded=true;const script=document.createElement('script');script.src='/diagrams.js'+new URL(import.meta.url).search;document.body.append(script);}else document.dispatchEvent(new Event('canary-diagrams-visible'));}}));
+function selectScene(value){scene=value;selectionInitialized=true;sessionStorage.setItem('canary-scene',scene);document.querySelectorAll('[data-scene]').forEach(b=>b.classList.toggle('selected',b.dataset.scene===scene));text($('#scene-question'),stories[scene][0]);text($('#scene-description'),stories[scene][1]);$('#revision').value=scene==='retry'?'v3':'v2';}
+document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;sessionStorage.setItem('canary-tab',tab);document.querySelectorAll('.tab').forEach(p=>p.classList.toggle('active',p.id===tab));document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b===button));if(tab==='logs')logs();if(tab==='architecture'){if(!window.canaryDiagramsLoaded){window.canaryDiagramsLoaded=true;const script=document.createElement('script');script.src='/diagrams.js'+new URL(import.meta.url).search;document.body.append(script);}else document.dispatchEvent(new Event('canary-diagrams-visible'));}}));
 document.querySelectorAll('[data-scene]').forEach(b=>b.addEventListener('click',()=>selectScene(b.dataset.scene)));
 function investigate(){if(!canInvestigate)return;return action(()=>api(`/evaluate?scene=${scene}&profile=${$('#profile').value}&revision=${$('#revision').value}`,'POST'));}
 $('#evaluate').addEventListener('click',investigate);$('#profile').addEventListener('change',render);
@@ -183,7 +233,7 @@ async function setFault(seconds){
 $('#inject').addEventListener('click',()=>setFault(25));$('#clear').addEventListener('click',()=>setFault(0));
 renderFault();setInterval(renderFault,1000);
 $('#connect').addEventListener('click',()=>$('#access-dialog').showModal());$('#save-token').addEventListener('click',()=>{const input=$('#token');if(!input.value)return;token=input.value;sessionStorage.setItem('canary-token',token);setTimeout(poll,0);});
-$('#demo-mode').addEventListener('change',()=>{const extended=$('#demo-mode').value==='extended';document.querySelectorAll('.extended').forEach(el=>el.hidden=!extended);if(!extended&&scene==='missing')selectScene('healthy');});
+$('#demo-mode').addEventListener('change',()=>{sessionStorage.setItem('canary-demo-mode',$('#demo-mode').value);const extended=$('#demo-mode').value==='extended';document.querySelectorAll('.extended').forEach(el=>el.hidden=!extended);if(!extended&&scene==='missing')selectScene('healthy');});
 $('#reset').addEventListener('click',()=>action(async()=>{
  const result=await api('/reset','POST');faultUntil=0;faultMessage='';sessionStorage.removeItem('canary-fault-until');renderFault();stateGeneration++;state.latest={};clusterView=null;progressView=null;progressReceivedAt=0;lastCluster=0;
  selectScene('healthy');$('#revision').value='v1';$('#profile').value='development';paused=false;
@@ -195,4 +245,7 @@ $('#pause-logs').addEventListener('click',()=>{paused=!paused;text($('#pause-log
 async function logs(){if(tab!=='logs'||paused)return;const source=$('#log-source').value;if(source==='agents'){render();return;}try{text($('#console'),(await api('/logs/'+source)).join('\n'));}catch(e){notice(e.message);}}
 $('#log-source').addEventListener('change',logs);
 window.addEventListener('hashchange',()=>{const value=consumeAccess();if(!value)return;token=value;sessionStorage.setItem('canary-token',token);if($('#access-dialog').open)$('#access-dialog').close();poll();});
+if(sessionStorage.getItem('canary-demo-mode')==='extended'){$('#demo-mode').value='extended';$('#demo-mode').dispatchEvent(new Event('change'));}
+const savedScene=sessionStorage.getItem('canary-scene');if(Object.hasOwn(stories,savedScene)&&!(savedScene==='missing'&&$('#demo-mode').value!=='extended'))selectScene(savedScene);
+const savedTab=sessionStorage.getItem('canary-tab');const savedButton=[...document.querySelectorAll('[data-tab]')].find(button=>button.dataset.tab===savedTab);if(savedButton)savedButton.click();
 agentCards();poll();setInterval(poll,2000);setInterval(logs,4000);setInterval(pollProgress,4000);
