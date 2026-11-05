@@ -82,4 +82,15 @@ class AgentWorkflowTest {
         } finally {MockOpenAi.forceHealthy=false;MockOpenAi.malformedResponses.set(0);}
     }
 
+    @Test void healthyMixedMetricProseCompletesWithGoWithoutACorrectionPass() throws Exception {
+        MockOpenAi.mixedUnits=true;
+        try {
+            var e=investigations.start(RehearsalEvidence.forScene("healthy"),"development");
+            for(int i=0;i<400 && e.status.equals("RUNNING");i++)Thread.sleep(50);
+            assertEquals("COMPLETE",e.status);assertEquals(Domain.Verdict.GO,e.decision.effective());
+            assertEquals(1,e.numericalReviews.size());assertTrue(e.numericalReviews.getFirst().issues().isEmpty());
+            assertTrue(e.toolCalls.get()<=6);assertTrue(e.executionFailures.isEmpty());
+        } finally {MockOpenAi.mixedUnits=false;}
+    }
+
 }

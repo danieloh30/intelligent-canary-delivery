@@ -16,6 +16,7 @@ public class MockOpenAi implements QuarkusTestResourceLifecycleManager {
     public static volatile String numericalScenario="";
     public static final AtomicInteger malformedResponses=new AtomicInteger();
     public static volatile boolean forceHealthy=false;
+    public static volatile boolean mixedUnits=false;
     public Map<String,String> start() {
         try {
             server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
@@ -37,6 +38,11 @@ public class MockOpenAi implements QuarkusTestResourceLifecycleManager {
                         List<Map<String,Object>> calls=new ArrayList<>();int n=0;
                         for(var tool:input.path("tools")) calls.add(Map.of("id","call_"+(n++),"type","function","function",Map.of("name",tool.path("function").path("name").asText(),"arguments",json.writeValueAsString(Map.of("evaluation_id",id)))));
                         message.put("tool_calls",calls);finish="tool_calls";
+                    } else if(mixedUnits) {
+                        var answer=new LinkedHashMap<String,Object>();
+                        answer.put("summary","Both revisions exceed the minimum request requirement of 30 requests and maintain latencies well below the 500 ms limit. All requests were successful with latencies well below the 500 ms threshold.");
+                        answer.put("evidenceIds",List.of(id));answer.put("limitations",List.of());if(decision)answer.put("verdict","GO");
+                        message.put("content",json.writeValueAsString(answer));
                     } else if(!decision && input.toString().contains("Evaluate the metrics for investigation") && malformedResponses.getAndDecrement()>0) {
                         message.put("content","not valid structured output; raw-model-content-that-must-not-be-displayed");
                     } else if(!numericalScenario.isBlank() && (numericalScenario.equals("persistent") || !input.toString().contains("contradiction:"))) {

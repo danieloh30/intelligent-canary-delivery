@@ -25,8 +25,19 @@ public final class NumericalReview {
             "instruction","Use these computed comparisons. A measured regression is a finding, not missing evidence. Relative differences below 500 ms alone do not breach the latency limit.",
             "correction",e.numericalFeedback);
     }
-    private static final Pattern SAMPLE=Pattern.compile("(?i)(insufficient.{0,45}(requests|samples|observations)|(?:requests|samples|observations).{0,70}(?:does not meet|below|less than|insufficient|not enough))");
-    private static final Pattern LATENCY=Pattern.compile("(?i)(?:latency|p95).{0,100}(?:exceed\\w*|above|breach\\w*|higher than).{0,55}(?:500|threshold|limit)");
+    // Match a direct claim about its own metric and unit. Never bridge arbitrary prose:
+    // "sufficient requests and latency below 500 ms" is NOT a request-shortage claim.
+    private static final String SAMPLE_UNIT="(?:requests?|samples?|observations?)";
+    private static final String SAMPLE_MINIMUM="(?:(?:the|minimum|required|requirement|threshold|of|is)\\s+)*30\\b";
+    private static final Pattern SAMPLE=Pattern.compile("(?i)\\b(?:"
+        + "(?:insufficient|inadequate|too few|not enough)\\s+(?:(?:canary|stable|observed|recorded|revision)\\s+){0,3}"+SAMPLE_UNIT
+        + "|"+SAMPLE_UNIT+"(?:\\s+(?:count|counts|is|are|was|were|still|remain|remains)){0,4}\\s+(?:below|less than|fewer than)\\s+"+SAMPLE_MINIMUM
+        + "|"+SAMPLE_UNIT+"\\s+(?:do(?:es)? not meet|fail(?:s)? to meet)\\s+"+SAMPLE_MINIMUM+")");
+    private static final Pattern LATENCY=Pattern.compile("(?i)\\b(?:p95(?:\\s+latency)?|latency|latencies)\\s+"
+        + "(?:(?:of\\s+)?\\d+(?:\\.\\d+)?\\s*(?:ms|milliseconds?)\\s+)?"
+        + "(?:(?:is|are|was|were|still|currently|significantly|slightly|well)\\s+){0,4}"
+        + "(?:exceeds?|exceeding|above|breaches?|breaching|higher than)\\s+(?:(?:the|its|defined|acceptable|safety|latency)\\s+){0,4}"
+        + "(?:500\\s*(?:ms|milliseconds?)\\b|(?:limit|threshold)\\b)");
     public static List<String> issues(Evidence e, InvestigationWorkflow.Report report) {
         List<String> issues=new ArrayList<>();
         List<String> claims=new ArrayList<>();

@@ -35,4 +35,23 @@ class NumericalReviewTest {
         assertTrue(NumericalReview.issues(e,report(e,"Insufficient requests in canary revision")).isEmpty());
         assertTrue(NumericalReview.issues(e,report(e,"Dependency cause cannot be determined; trace coverage is incomplete")).isEmpty());
     }
+    @Test void capturedSuccessfulRequestAndLowLatencyClaimsAreNotSampleShortages() {
+        var e=snapshot(562,6.1);
+        for(var claim:List.of(
+            "The investigation into dependencies for the canary revision (v2) shows that all requests were successful with latencies well below the 500 ms threshold",
+            "The runbook confirms that the prerequisites for proceeding with the release are met, as both revisions have sufficient requests and latency is below the threshold",
+            "The canary revision has sufficient requests and maintains stable performance with latencies well below the 500 ms limit",
+            "Both revisions exceed the minimum request requirement of 30 requests and maintain latencies well below the 500 ms limit",
+            "The investigation into dependencies for the canary revision (v2) indicates that all requests were successful, with latencies well below the 500 ms threshold",
+            "Latency is 6 ms and sample counts are above the minimum threshold of 30 requests",
+            "The request count is sufficient, while latency is less than 500 ms"))
+            assertTrue(NumericalReview.issues(e,report(e,claim)).isEmpty(),claim);
+    }
+    @Test void onlyDirectThresholdClaimsAreFlaggedAcrossMixedMetrics() {
+        var e=snapshot(58,6.1);
+        for(var claim:List.of("Requests are below the minimum 30", "58 requests does not meet the minimum 30 requests", "Insufficient canary requests", "Canary p95 latency is above the 500 ms threshold", "Canary latency of 6.1 ms exceeds the 500 ms safety limit"))
+            assertFalse(NumericalReview.issues(e,report(e,claim)).isEmpty(),claim);
+        assertTrue(NumericalReview.issues(e,report(e,"Canary latency is higher than stable but below the 500 ms limit")).isEmpty());
+    }
+
 }
