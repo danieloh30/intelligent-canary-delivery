@@ -2,7 +2,7 @@
 
 # Plan production automation
 
-The conference demo deliberately waits for a presenter to click **Investigate** at 10% and 50%. An automatic implementation can start the same four-agent investigation from a server-side trigger. The authority boundary stays the same: evidence supports a recommendation, Decision Policy determines the effective result, and Argo controls the rollout.
+The conference demo uses **manual investigation** at 10% and 50%. An automatic implementation can start the same four-agent investigation from a server-side trigger. The authority boundary stays the same: evidence supports a recommendation, Decision Policy determines the effective result, and Argo controls the rollout.
 
 **This chapter describes proposed production changes. Automatic investigations are not enabled in this repository.** Open **Production tips** in the SPA's left navigation for the conference discussion version.
 
@@ -150,6 +150,6 @@ Normal production automation observes real conditions. It does not inject faults
 
 ## Conference talk track
 
-> The manual click gives this demonstration deliberate timing. A production coordinator can start the same investigation automatically. The agents still recommend, Decision Policy authorizes, and Argo controls traffic. Human review is a separate policy choice.
+> Manual investigation gives this demonstration deliberate timing. A production coordinator can start the same investigation automatically. The agents still recommend, Decision Policy authorizes, and Argo controls traffic. Human review is a separate policy choice.
 
 The design recommendation is to automate the repetitive trigger first, validate the evidence contract, and expand promotion authority only when the organization's risk policy and operational controls support it.
