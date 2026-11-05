@@ -108,15 +108,27 @@ public class InvestigationService {
         e.decision=policy.evaluate(e.evidence,e.recommendation,e.profile,true,Instant.now());
         store.event("policy","Presenter approved " + e.id + ": " + e.decision.effective());
     }
+    static List<String> validationIssues(Evaluation e) {
+        List<String> issues=new ArrayList<>();
+        var missingTools=List.of("metrics-tool","trace-tool","log-tool","release-tool","runbook-tool")
+            .stream().filter(tool->!e.toolReads.contains(tool)).toList();
+        if(!missingTools.isEmpty())issues.add("Missing mandatory tool reads: "+String.join(", ",missingTools));
+        for(var role:List.of("metrics","dependency","release")) {
+            var f=e.findings.get(role);
+            if(f==null){issues.add("Missing "+role+" specialist finding");continue;}
+            if(f.summary()==null||f.summary().isBlank())issues.add(role+" specialist returned an empty summary");
+            if(f.evidenceIds()==null||f.evidenceIds().isEmpty()||f.evidenceIds().stream().anyMatch(id->!e.id.equals(id)))
+                issues.add(role+" specialist has missing or invalid investigation references");
+            if(f.limitations()==null)issues.add(role+" specialist did not report its limitations");
+            else for(var limitation:f.limitations())issues.add(role+" specialist: "+limitation);
+        }
+        return List.copyOf(issues);
+    }
     private void complete(Evaluation e) { synchronized(e) {
         if(e.mode.equals("live") && !e.status.equals("FAILED")) {
-            boolean tools=e.toolReads.containsAll(Set.of("metrics-tool","trace-tool","log-tool","release-tool","runbook-tool"));
-            boolean findings=e.findings.size()==3 && e.findings.values().stream().allMatch(f ->
-                f!=null && f.summary()!=null && !f.summary().isBlank() && f.evidenceIds()!=null
-                && !f.evidenceIds().isEmpty() && f.evidenceIds().stream().allMatch(e.id::equals)
-                && f.limitations()!=null && f.limitations().isEmpty());
-            if(!tools || !findings) e.recommendation=new Recommendation(Verdict.HOLD,
-                "Mandatory tool reads or valid specialist findings are missing",List.of(e.id),List.of("Incomplete investigation"));
+            var issues=validationIssues(e);
+            if(!issues.isEmpty()) e.recommendation=new Recommendation(Verdict.HOLD,
+                "Investigation incomplete: "+String.join("; ",issues),List.of(e.id),issues);
         }
         if(!e.status.equals("FAILED") && !e.numericalReviews.isEmpty() && !e.numericalReviews.getLast().issues().isEmpty())
             e.recommendation=new Recommendation(Verdict.HOLD,"Numerical contradictions remain after one correction attempt",List.of(e.id),e.numericalReviews.getLast().issues());

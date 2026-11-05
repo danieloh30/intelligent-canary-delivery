@@ -67,4 +67,20 @@ class DecisionPolicyTest {
         assertEquals(Verdict.HOLD,policy.evaluate(e,hold,"development",false,Instant.now()).effective());
     }
 
+    @Test void sharedSlowdownReasonIncludesCapturedLatenciesAndActualLimitations() {
+        var e=signals(651.92,653.46,1,1,0);
+        var hold=new Recommendation(Verdict.HOLD,"Shared degradation",List.of(e.id()),List.of("Dependency cause not established"));
+        var d=policy.evaluate(e,hold,"development",false,Instant.now());
+        assertEquals(Verdict.HOLD,d.effective());assertTrue(d.reason().contains("stable p95 651.92 ms"));
+        assertTrue(d.reason().contains("canary p95 653.46 ms"));assertTrue(d.reason().contains("500 ms"));
+        assertTrue(d.reason().contains("Dependency cause not established"));assertTrue(d.reason().contains("not proof of root cause"));
+    }
+    @Test void healthyLatencyWithIncompleteFindingsIsNotPresentedAsSharedSlowdown() {
+        var e=signals(2.7,6.1,1,1,0);
+        var hold=new Recommendation(Verdict.HOLD,"Incomplete investigation",List.of(e.id()),List.of("Missing release specialist finding"));
+        var d=policy.evaluate(e,hold,"development",false,Instant.now());
+        assertEquals(Verdict.HOLD,d.effective());assertTrue(d.reason().contains("Missing release specialist finding"));
+        assertFalse(d.reason().contains("Shared latency degradation"));
+    }
+
 }

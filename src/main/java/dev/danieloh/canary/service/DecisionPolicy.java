@@ -26,13 +26,17 @@ public class DecisionPolicy {
                 || r.evidenceIds() == null || r.evidenceIds().isEmpty()
                 || r.evidenceIds().stream().anyMatch(id -> !id.equals(e.id())))
             return result(r, Verdict.HOLD, "Recommendation lacks verifiable evidence references", false, expiry, profile);
-        if (r.limitations() == null || !r.limitations().isEmpty())
-            return result(r, Verdict.HOLD, "Recommendation reports unresolved limitations", false, expiry, profile);
         if (e.stable().p95Ms()>500 && e.canary().p95Ms()>500
                 && e.canary().p95Ms()<=e.stable().p95Ms()*SHARED_LATENCY_RATIO_LIMIT
                 && e.canary().errorRate()<=e.stable().errorRate()
                 && e.canary().attemptsPerCheckout()<=e.stable().attemptsPerCheckout())
-            return result(r, Verdict.HOLD, "Both revisions exceed 500 ms with comparable latency (canary at most 20% above stable) and no canary-only error or retry increase; investigate shared degradation and collect recovery evidence", false, expiry, profile);
+            return result(r, Verdict.HOLD, String.format(java.util.Locale.ROOT,
+                "Shared latency degradation: stable p95 %.2f ms; canary p95 %.2f ms. Both revisions exceed 500 ms with comparable latency (canary at most 20%% above stable) and no canary-only error or retry increase. HOLD until fresh evidence shows recovery; this comparison supports a shared-issue hypothesis, not proof of root cause.",
+                e.stable().p95Ms(),e.canary().p95Ms())
+                +(r.limitations()!=null&&!r.limitations().isEmpty()?" Additional investigation limitations: "+String.join("; ",r.limitations()):""),false,expiry,profile);
+        if (r.limitations() == null || !r.limitations().isEmpty())
+            return result(r, Verdict.HOLD, r.limitations()==null?"Recommendation did not report its limitations":
+                "Unresolved investigation limitations: "+String.join("; ",r.limitations()), false, expiry, profile);
         if (r.verdict() == Verdict.GO && (e.canary().p95Ms() > 500 || e.canary().errorRate() > 0.01))
             return result(r, Verdict.HOLD, "Customer health has not recovered; collect another window", false, expiry, profile);
         if (r.verdict() == Verdict.GO && profile.equals("production") && !approved)
