@@ -64,7 +64,7 @@ Apply production approval requirements. Withhold promotion when evidence is miss
 
 </div>
 
-## Build it in four steps
+## Build the demo, then plan production
 
 <div class="learning-path" markdown>
 
@@ -72,6 +72,7 @@ Apply production approval requirements. Withhold promotion when evidence is miss
 <a href="tutorials/02-cluster/"><span class="path-number">02</span><span><strong>Connect delivery to Kubernetes</strong><small>Install GitOps, Argo Rollouts, workloads, and observability on OpenShift.</small></span><span aria-hidden="true">↗</span></a>
 <a href="tutorials/03-investigate/"><span class="path-number">03</span><span><strong>Investigate the candidate</strong><small>Run both failure scenarios and follow the four-agent workflow.</small></span><span aria-hidden="true">↗</span></a>
 <a href="tutorials/04-govern/"><span class="path-number">04</span><span><strong>Govern the outcome</strong><small>Require fresh evidence, enforce safety limits, and approve eligible production releases.</small></span><span aria-hidden="true">↗</span></a>
+<a href="tutorials/05-production/"><span class="path-number">05</span><span><strong>Plan production automation</strong><small>Compare manual and automatic investigation, human review, implementation patterns, and operational tradeoffs.</small></span><span aria-hidden="true">↗</span></a>
 
 </div>
 

@@ -16,9 +16,9 @@ function rolloutPhase(phase){
 }
 async function api(path,method='GET'){
  const response=await fetch('/api'+path,{method,headers:token?{Authorization:'Bearer '+token}:{}});
- if(response.status===401){text($('#connection'),'Access required');if(!$('#access-dialog').open)$('#access-dialog').showModal();throw new Error('Enter a valid presenter token.');}
+ if(response.status===401){$('#connect').hidden=false;text($('#connection'),'Access required');if(!$('#access-dialog').open)$('#access-dialog').showModal();throw new Error('Enter a valid presenter token.');}
  if(!response.ok){let body=await response.text();throw new Error(body.slice(0,180)||`Request failed (${response.status})`);}
- return response.json();
+ const value=await response.json();$('#connect').hidden=true;if($('#access-dialog').open)$('#access-dialog').close();return value;
 }
 function agentCards(e={}){
  const parent=$('#agents');parent.replaceChildren();Object.entries(names).forEach(([key,name],i)=>{

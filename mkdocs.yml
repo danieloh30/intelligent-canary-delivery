@@ -37,6 +37,7 @@ nav:
       - '02 / Install on Kubernetes': tutorials/02-cluster.md
       - '03 / Investigate a release': tutorials/03-investigate.md
       - '04 / Govern the decision': tutorials/04-govern.md
+      - '05 / Plan production automation': tutorials/05-production.md
   - Understand the platform:
       - Architecture: architecture.md
       - Java agents and tools: reference/agents.md

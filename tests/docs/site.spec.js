@@ -32,7 +32,7 @@ test('mobile home fits the viewport and chapter links work',async({page})=>{
 });
 
 test('tutorial routes and local assets resolve',async({request})=>{
- const paths=['/','/tutorials/01-local/','/tutorials/02-cluster/','/tutorials/03-investigate/','/tutorials/04-govern/','/architecture/','/reference/agents/','/reference/api/','/reference/observability/','/reference/troubleshooting/','/demo-design/'];
+ const paths=['/','/tutorials/01-local/','/tutorials/02-cluster/','/tutorials/03-investigate/','/tutorials/04-govern/','/tutorials/05-production/','/architecture/','/reference/agents/','/reference/api/','/reference/observability/','/reference/troubleshooting/','/demo-design/'];
  for(const path of paths){const response=await request.get(path);expect(response.ok(),path).toBeTruthy();}
  for(const path of ['/assets/vendor/mermaid-12.1.0.min.js','/javascripts/diagrams.js','/javascripts/mermaid-solid-fills.js','/stylesheets/tutorial.css']){expect((await request.get(path)).ok(),path).toBeTruthy();}
 });
@@ -49,4 +49,11 @@ test('tutorial screenshots decode and link to their full-resolution source',asyn
    expect(await image.evaluate(node=>node.closest('a')?.href===node.src)).toBeTruthy();
   }
  }
+});
+
+test('production tutorial distinguishes proposed automation from current behavior and explains implementation tradeoffs',async({page})=>{
+ await page.goto('/tutorials/05-production/');await expect(page.getByRole('heading',{name:/^Plan production automation/})).toBeVisible();const article=page.locator('article');
+ for(const phrase of ['Automatic investigations are not enabled','two independent questions','server-side coordinator','AnalysisRun UID','within one application instance','Do not reroll the model','does not exist in the demo','authorize the next stage','separate authorization'])await expect(article).toContainText(phrase);
+ await expect(article.locator('a[href="https://argoproj.github.io/argo-rollouts/analysis/job/"]')).toHaveCount(1);
+ await page.setViewportSize({width:390,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBeTruthy();
 });

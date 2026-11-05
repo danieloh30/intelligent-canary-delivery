@@ -3,11 +3,11 @@ import {test,expect} from 'playwright/test';
 test('launcher consumes access fragment and removes it from the address bar',async({page})=>{
  await page.goto('/#access=browser-test');
  await expect(page.locator('#connection')).toHaveText('Offline rehearsal');
- await expect(page.locator('#access-dialog')).not.toBeVisible();
+ await expect(page.locator('#access-dialog')).not.toBeVisible();await expect(page.locator('#connect')).toBeHidden();
  expect(new URL(page.url()).hash).toBe('');
  expect(await page.evaluate(()=>sessionStorage.getItem('canary-token'))).toBe('browser-test');
  await page.reload();
- await expect(page.locator('#access-dialog')).not.toBeVisible();
+ await expect(page.locator('#access-dialog')).not.toBeVisible();await expect(page.locator('#connect')).toBeHidden();
 });
 
 test('local default connects without a presenter dialog',async({page})=>{
@@ -18,7 +18,7 @@ test('local default connects without a presenter dialog',async({page})=>{
  });
  await page.goto('/');
  await expect(page.locator('#connection')).toHaveText('Offline rehearsal');
- await expect(page.locator('#access-dialog')).not.toBeVisible();
+ await expect(page.locator('#access-dialog')).not.toBeVisible();await expect(page.locator('#connect')).toBeHidden();
  expect(credentials[0]).toBe('Bearer demo-local');
 });
 
@@ -37,7 +37,7 @@ test('deployed hostname requires access and launcher credential takes precedence
  await page.evaluate(()=>sessionStorage.setItem('canary-token','expired-token'));
  await page.goto('https://canary.example.test/#access=browser-test');
  await expect(page.locator('#connection')).toHaveText('Kubernetes connected');
- await expect(page.locator('#access-dialog')).not.toBeVisible();
+ await expect(page.locator('#access-dialog')).not.toBeVisible();await expect(page.locator('#connect')).toBeHidden();
  expect(new URL(page.url()).hash).toBe('');
 });
 
@@ -54,10 +54,20 @@ test('OpenShift SSO connects a direct route with cookies and no presenter token'
  });
  await page.goto('https://sso.example.test/');
  await expect(page.locator('#connection')).toHaveText('Kubernetes connected');
- await expect(page.locator('#access-dialog')).not.toBeVisible();
+ await expect(page.locator('#access-dialog')).not.toBeVisible();await expect(page.locator('#connect')).toBeHidden();
  expect(await page.evaluate(()=>sessionStorage.getItem('canary-token'))).toBeNull();
  await page.getByRole('button',{name:'Live console'}).click();
  await page.locator('#log-source').selectOption('argocd');
  await expect(page.locator('#console')).toContainText('SSO controller logs');
  expect(headers.every(value=>value===undefined)).toBeTruthy();
+});
+
+test('manual access control appears only for a 401 and hides after credential recovery',async({page})=>{
+ await page.route('**/api/**',r=>{
+  if(r.request().headers().authorization!=='Bearer restored-token')return r.fulfill({status:401,json:{error:'Presenter token required'}});
+  return r.fulfill({json:{mode:'fixture',clusterEnabled:false,latest:{},events:[]}});
+ });
+ await page.goto('/');await expect(page.locator('#access-dialog')).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('#connect')).toBeVisible();
+ await page.locator('#connect').click();await expect(page.locator('#access-dialog')).toBeVisible();await page.locator('#token').fill('restored-token');await page.locator('#save-token').click();
+ await expect(page.locator('#connection')).toHaveText('Offline rehearsal');await expect(page.locator('#access-dialog')).not.toBeVisible();await expect(page.locator('#connect')).toBeHidden();
 });

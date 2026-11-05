@@ -123,3 +123,5 @@ You can demonstrate a model recommending GO while policy withholds authority, an
 </div>
 
 Review the [presenter playbook](../demo-design.md) to choose the 10-minute or 15-minute flow.
+
+Next: [Plan production automation](05-production.md) to compare manual triggers, automatic investigation with human review, and unattended promotion, including fault coordination and implementation options.
