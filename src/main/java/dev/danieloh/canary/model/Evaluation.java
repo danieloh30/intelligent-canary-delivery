@@ -22,6 +22,7 @@ public class Evaluation {
     public final List<dev.danieloh.canary.agentic.AgentFailure> executionFailures = new java.util.concurrent.CopyOnWriteArrayList<>();
     public volatile Recommendation recommendation;
     public volatile Decision decision;
+    public volatile HumanReview humanReview;
     public Evaluation(Evidence evidence, String profile, String mode) {
         this.id = evidence.id(); this.evidence = evidence; this.profile = profile; this.mode = mode;
         for (var name : List.of("metrics", "dependency", "release", "decision")) agents.put(name, "QUEUED");

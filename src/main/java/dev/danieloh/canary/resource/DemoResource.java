@@ -56,7 +56,25 @@ public class DemoResource {
         }
     }
     @GET @Path("/evaluations/{id}") public Evaluation evaluation(@PathParam("id") String id){control();return store.require(id);}
-    @POST @Path("/evaluations/{id}/approve") public Evaluation approve(@PathParam("id") String id){control();var e=store.require(id);investigations.approve(e);return e;}
+    @POST @Path("/evaluations/{id}/approve") public Evaluation approve(@PathParam("id") String id){
+        control();synchronized(investigations){var e=store.require(id);verifyReviewGate(e);investigations.approve(e);return e;}
+    }
+    @POST @Path("/evaluations/{id}/decline") public Evaluation decline(@PathParam("id") String id){
+        control();synchronized(investigations){var e=store.require(id);verifyReviewGate(e);investigations.decline(e);return e;}
+    }
+    private void verifyReviewGate(Evaluation e) {
+        if(!cluster.isEnabled())return;
+        try {
+            var status=(Map<?,?>)cluster.rollout().getAdditionalProperties().get("status");
+            if(status==null || !Set.of("Progressing","Paused").contains(Objects.toString(status.get("phase"),""))
+                    || Boolean.TRUE.equals(status.get("abort")) || !(status.get("currentStepIndex") instanceof Number step)
+                    || step.intValue()!=e.evidence.rolloutStep()
+                    || !e.evidence.matchesPodHash(Objects.toString(status.get("currentPodHash"),""))
+                    || !e.evidence.stableRevision().equals(Objects.toString(status.get("stableRS"),"")))
+                throw new ClientErrorException("This review no longer belongs to the current rollout gate",409);
+        }catch(ClientErrorException ex){throw ex;}
+        catch(Exception ex){throw new ServiceUnavailableException("Cannot verify the current rollout gate; retry when cluster observations are available");}
+    }
     @POST @Path("/fault/{seconds}") public Map<String,Object> fault(@PathParam("seconds") int seconds){control();if(seconds<0||seconds>120)throw new BadRequestException();cluster.fault(seconds);store.event("presenter","Inventory slowdown set to "+seconds+" seconds");return Map.of("seconds",seconds);}
     @GET @Path("/analysis")
     public Map<String,Object> analysis(@QueryParam("revision") String revision) {

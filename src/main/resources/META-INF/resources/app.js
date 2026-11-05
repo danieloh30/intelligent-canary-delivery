@@ -120,7 +120,7 @@ function render(){
  const d=e.decision;const effective=$('#effective-verdict');text(effective,d?d.effective.replace('_','-'):e.status==='RUNNING'?'Investigating…':'Awaiting investigation');effective.className=d?.effective==='GO'?'good':d?.effective==='NO_GO'?'bad':'hold';
  text($('#policy-reason'),retained?`Recorded NO-GO for this aborted rollout. ${d.reason}${expired?' Evidence expired; retained as an outcome, not fresh authorization.':''}`:d?.reason||'Specialists are collecting and correlating evidence.');
  text($('#source'),retained?'Recorded aborted-rollout outcome · frozen evidence':evidence.source.replaceAll('_',' '));text($('#evaluation-id'),e.id+' · '+new Date(evidence.capturedAt).toLocaleTimeString()+(retained?' · retained NO-GO':''));
- $('#approve').hidden=retained||!d?.approvalRequired;
+ for(const id of ['approve','decline','review-help'])$('#'+id).hidden=retained||!d?.approvalRequired;
  }else{
  for(const id of ['success','latency','attempts','samples'])text($('#'+id),'—');
  text($('#static-verdict'),'Awaiting signals');$('#static-verdict').className='hold';
@@ -130,7 +130,7 @@ function render(){
  text($('#policy-reason'),pendingBaseline?'v1 recovery uses the normal rollout gates. Wait for observations, then run Development investigations at 10% and 50%.':baseline?'Healthy v1 baseline. Release v2 when ready to begin.':current&&expired?'This decision has expired. Run a fresh investigation.':evidence?'The previous investigation belongs to another release or rollout stage. Run a fresh investigation.':'No current investigation. Release a candidate and collect observations before investigating.');
  text($('#source'),evidence?'Previous investigation · retained in Evidence explorer':'No observation captured');
  text($('#evaluation-id'),evidence?e.id+' · historical result':'Release-bound decisions expire after 120 seconds.');
- $('#approve').hidden=true;
+ for(const id of ['approve','decline','review-help'])$('#'+id).hidden=true;
  if(!evidence){evidenceRenderKey='';$('#evidence-content').replaceChildren();text($('#evidence-content'),'No current investigation. Release a candidate and run an investigation to inspect its evidence.');}
  if(!state.clusterEnabled){text($('#stable-version'),'v1');text($('#canary-version'),'—');}
  }
@@ -143,6 +143,7 @@ function render(){
  const canaryActive=!['—',''].includes($('#canary-version').textContent);
  $('#canary-identity').dataset.active=String(canaryActive);
  text($('#canary-description'),canaryActive?'Candidate under evaluation':'No active canary');
+ for(const id of ['approve','decline'])$('#'+id).disabled=busy||releasing||e.status==='RUNNING';
  $('#profile').disabled=busy||releasing||e.status==='RUNNING';
  $('#reset').disabled=state.resetEnabled===false||busy||releasing||e.status==='RUNNING';
  renderProgress();
@@ -156,10 +157,10 @@ function render(){
 let evidenceRenderKey='';
 function evidenceNode(tag,cls,value){const el=document.createElement(tag);if(cls)el.className=cls;if(value!==undefined)el.textContent=value;return el;}
 function highlightFinding(el,value){
- const parts=String(value||'').split(/(\bretry (?:safety )?budget(?: (?:with|of) \d+(?:\.\d+)? attempts? per checkout| (?:was |has been )?exceeded)?\b|\b(?:only )?\d+(?:\.\d+)? (?:dependency )?attempts? per checkout\b|\bcanary \d+(?:\.\d+)? attempts? per checkout versus stable \d+(?:\.\d+)?\b|\bmore than \d+(?:\.\d+)? attempts? and more than twice stable\b|\bsignificantly (?:lower|higher|faster|slower)\b|\b(?:low|high|higher|lower|elevated) latenc(?:y|ies)\b|\bno retr(?:y|ies)\b|\bretry amplification\b|\b(?:no |unresolved )?missing evidence\b|\bunresolved limitations\b|\bshared (?:slowdown|degradation|dependency)\b|\bno error(?:s| rates)?\b|\b(?:NO_GO|NO-GO|HOLD|GO)\b)/gi);
+ const parts=String(value||'').split(/(\bpresenter-injected trace evidence outage\b|\bretry (?:safety )?budget(?: (?:with|of) \d+(?:\.\d+)? attempts? per checkout| (?:was |has been )?exceeded)?\b|\b(?:only )?\d+(?:\.\d+)? (?:dependency )?attempts? per checkout\b|\bcanary \d+(?:\.\d+)? attempts? per checkout versus stable \d+(?:\.\d+)?\b|\bmore than \d+(?:\.\d+)? attempts? and more than twice stable\b|\bsignificantly (?:lower|higher|faster|slower)\b|\b(?:low|high|higher|lower|elevated) latenc(?:y|ies)\b|\bno retr(?:y|ies)\b|\bretry amplification\b|\b(?:no |unresolved )?missing evidence\b|\bunresolved limitations\b|\bshared (?:slowdown|degradation|dependency)\b|\bno error(?:s| rates)?\b|\b(?:NO_GO|NO-GO|HOLD|GO)\b)/gi);
  el.replaceChildren();parts.forEach((part,i)=>el.append(i%2?evidenceNode('mark','evidence-keyword',part):document.createTextNode(part)));return el;
 }
-function evidenceList(parent,title,items){parent.append(evidenceNode('h4','',title));const list=evidenceNode('ul','evidence-list');for(const item of items)list.append(evidenceNode('li','',item));parent.append(list);}
+function evidenceList(parent,title,items){parent.append(evidenceNode('h4','',title));const list=evidenceNode('ul','evidence-list');for(const item of items)list.append(highlightFinding(evidenceNode('li'),item));parent.append(list);}
 function renderEvidence(e){
  const v=e.evidence,expired=!!e.decision&&Date.parse(e.decision.expiresAt)<=Date.now(),current=evidenceCurrent(e);
  const retained=retainedNoGo(e);
@@ -192,6 +193,7 @@ function renderEvidence(e){
  decision.append(highlightFinding(evidenceNode('p'),e.recommendation?.summary||'The decision agent has not returned a recommendation yet.'));
  decision.append(highlightFinding(evidenceNode('p','policy-reason'),`Policy reason: ${e.decision?.reason||'Awaiting Decision Policy validation'}`));
  decision.append(evidenceNode('p','muted',`Policy: ${e.decision?.policy||e.profile||'Unknown'} · human approval ${e.decision?.approvalRequired?'required':e.decision?'not required by this decision':'not assessed'}. Saved policy output is authoritative; the comparisons below explain the evidence.`));
+ if(e.humanReview)decision.append(evidenceNode('p','human-review',`Human review: ${e.humanReview.action} by ${e.humanReview.actor} at ${new Date(e.humanReview.at).toLocaleString()}. This review belongs to this investigation and rollout stage.`));
  if(e.recommendation)evidenceList(decision,'Recommendation limitations',e.recommendation.limitations?.length?e.recommendation.limitations:['No limitations reported by the decision agent; this is not a guarantee that evidence is complete.']);
  host.append(decision);
  const comparison=evidenceNode('section','evidence-comparison');comparison.append(evidenceNode('h3','','Stable and canary · same frozen window'));
@@ -201,7 +203,22 @@ function renderEvidence(e){
  const delta=Number(canary.p95Ms)-Number(stable.p95Ms);
  const rows=[['Requests',stable.requests??'Unavailable',canary.requests??'Unavailable',stable.requests>=30&&canary.requests>=30?'Both cohorts meet the 30-request minimum.':'Insufficient observations: both cohorts need at least 30 requests.'],['p95 latency',num(stable.p95Ms)+' ms',num(canary.p95Ms)+' ms',`${delta>=0?'+':''}${num(delta)} ms canary minus stable. Canary GO safety limit: 500 ms.`],['Error rate',pct(stable.errorRate),pct(canary.errorRate),'Canary GO safety limit: 1%; the hard error cap is 10%.'],['Inventory attempts / checkout',num(stable.attemptsPerCheckout)+'×',num(canary.attemptsPerCheckout)+'×','Extra attempts reveal dependency work even when HTTP requests succeed.']];
  const retryExceeded=canary.attemptsPerCheckout>2&&canary.attemptsPerCheckout>stable.attemptsPerCheckout*2;
- for(const row of rows){const retryRow=row[0]==='Inventory attempts / checkout'&&retryExceeded,tr=evidenceNode('tr',retryRow?'retry-budget-row':'');row.forEach((value,i)=>{const cell=evidenceNode(i===0?'th':'td','');if(retryRow&&(i===1||i===2))cell.append(evidenceNode('mark','evidence-keyword',value));else cell.textContent=retryRow&&i===3?'Retry safety budget exceeded: canary is above 2 attempts and more than twice stable. Corroborating requests and logs are required for policy rejection.':value;tr.append(cell);});body.append(tr);}table.append(body);scroll.append(table);comparison.append(scroll);
+ const stableSlow=stable.p95Ms>500,canarySlow=canary.p95Ms>500;
+ const comparableSlowdown=stableSlow&&canarySlow&&canary.p95Ms<=stable.p95Ms*1.2&&canary.errorRate<=stable.errorRate&&canary.attemptsPerCheckout<=stable.attemptsPerCheckout;
+ for(const row of rows){
+ const retryRow=row[0]==='Inventory attempts / checkout'&&retryExceeded,latencyRow=row[0]==='p95 latency'&&(stableSlow||canarySlow);
+ const tr=evidenceNode('tr',retryRow?'retry-budget-row':latencyRow?'latency-limit-row':'');
+ row.forEach((value,i)=>{
+ const cell=evidenceNode(i===0?'th':'td','');
+ if(latencyRow&&((i===1&&stableSlow)||(i===2&&canarySlow)))cell.append(evidenceNode('mark','evidence-keyword latency-over-limit',value));
+ else if(latencyRow&&i===3){
+ cell.append(evidenceNode('strong','latency-limit-explanation',stableSlow&&canarySlow?'Both exceed the 500 ms limit.':canarySlow?'Canary exceeds the 500 ms limit.':'Stable exceeds the 500 ms limit.'));
+ cell.append(document.createTextNode(`${delta>=0?'+':''}${num(delta)} ms canary minus stable. `+(comparableSlowdown?'Comparable latency is consistent with shared degradation; it does not prove root cause.':'Inspect cohort differences and dependency evidence before assigning the cause.')));
+ }else if(retryRow&&(i===1||i===2))cell.append(evidenceNode('mark','evidence-keyword',value));
+ else cell.textContent=retryRow&&i===3?'Retry safety budget exceeded: canary is above 2 attempts and more than twice stable. Corroborating requests and logs are required for policy rejection.':value;
+ tr.append(cell);
+ });body.append(tr);
+ }table.append(body);scroll.append(table);comparison.append(scroll);
  const context=[];
  if(stable.requests>=30&&canary.requests>=30){
  if(stable.p95Ms>500&&canary.p95Ms>500)context.push('Both cohorts exceed 500 ms. This is consistent with shared degradation; it does not by itself prove that the release caused the slowdown. Inspect dependency findings and limitations.');
@@ -219,7 +236,7 @@ function renderEvidence(e){
  evidenceList(section,'Evidence references',f?.evidenceIds?.length?f.evidenceIds.map(id=>`${id}${id===v.id?' · matches this snapshot':' · does not match this snapshot'}`):['No evidence references returned yet.']);
  evidenceList(section,'Limitations',f?.limitations?.length?f.limitations:[f?'No limitations reported by this specialist.':'Not assessed yet.']);
  if(name==='dependency')section.append(evidenceNode('p','muted',`${traces.length} sampled request observations and ${(v.logs||[]).length} trace-linked log entries. Recent samples are a subset of the rolling window; their latency can differ from the aggregate p95. These are checkout request observations, not a complete distributed trace graph.`));
- if(name==='release')section.append(evidenceNode('p','',`Release notes: ${v.releaseNotes||'Not available'}. Collection gaps: ${missing.length?missing.join('; '):'none recorded'}.`));
+ if(name==='release')section.append(highlightFinding(evidenceNode('p'),`Release notes: ${v.releaseNotes||'Not available'}. Collection gaps: ${missing.length?missing.join('; '):'none recorded'}.`));
  host.append(section);
  }
  if(e.executionFailures?.length){
@@ -243,7 +260,7 @@ async function poll(){
  render();
  }catch(e){if(state.clusterEnabled){clusterView={connected:false};rolloutPhase('Unavailable');render();}notice(e.message);}
 }
-async function action(fn){busy=true;$('#evaluate').disabled=true;try{await fn();await poll();}catch(e){notice(e.message);}finally{busy=false;render();}}
+async function action(fn){if(busy)return;busy=true;render();try{await fn();await poll();}catch(e){notice(e.message);}finally{busy=false;render();}}
 function selectRevision(value){$('#revision').value=value;sessionStorage.setItem('canary-revision',value);}
 function selectScene(value){scene=value;selectionInitialized=true;sessionStorage.setItem('canary-scene',scene);document.querySelectorAll('[data-scene]').forEach(b=>b.classList.toggle('selected',b.dataset.scene===scene));text($('#scene-question'),stories[scene][0]);text($('#scene-description'),stories[scene][1]);selectRevision(scene==='retry'?'v3':'v2');}
 document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{tab=button.dataset.tab;sessionStorage.setItem('canary-tab',tab);document.querySelectorAll('.tab').forEach(p=>p.classList.toggle('active',p.id===tab));document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b===button));if(tab==='logs')logs();if(tab==='architecture'){if(!window.canaryDiagramsLoaded){window.canaryDiagramsLoaded=true;const script=document.createElement('script');script.src='/diagrams.js'+new URL(import.meta.url).search;document.body.append(script);}else document.dispatchEvent(new Event('canary-diagrams-visible'));}}));
@@ -258,6 +275,7 @@ $('#release').addEventListener('click',async()=>{
  catch(e){text($('#release-result'),e.message);}finally{releasing=false;render();}
 });
 $('#approve').addEventListener('click',()=>action(()=>api('/evaluations/'+state.latest.id+'/approve','POST')));
+$('#decline').addEventListener('click',()=>action(()=>api('/evaluations/'+state.latest.id+'/decline','POST')));
 let faultUntil=Number(sessionStorage.getItem('canary-fault-until')||0),faultMessage='',faultError=false,faultBusy=false,faultInvestigationAt=Number(sessionStorage.getItem('canary-fault-investigated-at')||0);
 function renderFault(){
  const remaining=Math.max(0,Math.ceil((faultUntil-Date.now())/1000));

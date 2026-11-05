@@ -103,10 +103,27 @@ public class InvestigationService {
         e.recommendation=new Recommendation(v,"Offline rehearsal outcome, not an LLM response",List.of(e.id),List.of());
         e.agents.put("decision","COMPLETE"); complete(e);
     }
+    private void requirePendingApproval(Evaluation e) {
+        if(store.latest()!=e || !e.status.equals("COMPLETE") || !e.profile.equals("production")
+                || e.decision==null || !e.decision.approvalRequired() || e.decision.effective()!=Verdict.HOLD
+                || e.recommendation==null || e.recommendation.verdict()!=Verdict.GO)
+            throw new jakarta.ws.rs.ClientErrorException("No pending Production approval for this investigation",409);
+        if(!Instant.now().isBefore(e.decision.expiresAt()))
+            throw new jakarta.ws.rs.ClientErrorException("Approval evidence expired; run a fresh investigation",409);
+    }
     public synchronized void approve(Evaluation e) {
-        if(e.decision==null || !e.decision.approvalRequired()) throw new jakarta.ws.rs.ClientErrorException("No pending approval",409);
+        requirePendingApproval(e);
         e.decision=policy.evaluate(e.evidence,e.recommendation,e.profile,true,Instant.now());
+        e.humanReview=new HumanReview(e.decision.effective()==Verdict.GO?"APPROVED":"APPROVAL_RECHECK_HELD",Instant.now(),"presenter");
         store.event("policy","Presenter approved " + e.id + ": " + e.decision.effective());
+    }
+    public synchronized void decline(Evaluation e) {
+        requirePendingApproval(e);
+        e.decision=new Decision(e.recommendation.verdict(),Verdict.NO_GO,
+            "Presenter declined promotion of "+e.evidence.revision()+" at rollout step "+e.evidence.rolloutStep(),
+            false,e.decision.expiresAt(),e.profile);
+        e.humanReview=new HumanReview("DECLINED",Instant.now(),"presenter");
+        store.event("policy","Presenter declined " + e.id + ": NO_GO at rollout step "+e.evidence.rolloutStep());
     }
     static List<String> validationIssues(Evaluation e) {
         List<String> issues=new ArrayList<>();

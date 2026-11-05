@@ -113,7 +113,7 @@ public class RolloutProgressService {
                     switch(latest.decision.effective()) {
                         case GO -> {state="ADVANCING";message="GO recorded for this stage. Waiting for Argo Rollouts to consume the decision.";ready=false;}
                         case NO_GO -> {state="FAILED";message="NO-GO recorded. Argo Rollouts will abort the candidate.";ready=false;}
-                        case HOLD -> {state=latest.decision.approvalRequired()?"APPROVAL":"HOLD";message=latest.decision.approvalRequired()?"Production approval is required. Review the evidence and use Approve promotion below.":"HOLD at this stage. Address the cause, wait for fresh observations, then investigate again.";ready=!latest.decision.approvalRequired();}
+                        case HOLD -> {state=latest.decision.approvalRequired()?"APPROVAL":"HOLD";message=latest.decision.approvalRequired()?"Production review is required. Review the evidence and choose Approve promotion or Decline promotion below.":"HOLD at this stage. Address the cause, wait for fresh observations, then investigate again.";ready=!latest.decision.approvalRequired();}
                     }
                 }
             }

@@ -7,6 +7,7 @@ import java.util.Map;
 public final class Domain {
     private Domain() {}
     public enum Verdict { GO, HOLD, NO_GO }
+    public record HumanReview(String action, Instant at, String actor) {}
     public record Signal(long requests, double errorRate, double p95Ms, double attemptsPerCheckout) {}
     public record Evidence(String id, Instant capturedAt, String source, String revision,
                            String stableRevision, int rolloutStep, Signal stable, Signal canary,

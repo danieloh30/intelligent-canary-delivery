@@ -22,10 +22,11 @@ This HITL capability already exists. Use it as an **Extended** demonstration aft
 1. At an active analysis gate, wait for the green readiness cue and fresh observations for both revisions.
 2. Select **Production / approval** and run the four-agent investigation explicitly.
 3. In Evidence explorer, compare the agent’s **GO recommendation** with the policy’s **HOLD effective decision** and approval requirement.
-4. Select **Approve promotion** while the evidence is still fresh. The policy rechecks eligibility; a valid approval changes the effective decision to GO.
-5. Watch the progress panel advance. A later gate requires a fresh investigation and, when using Production policy, a fresh approval.
+4. **Choose one action** while the evidence is fresh: **Approve promotion** authorizes an eligible GO after rechecking policy; **Decline promotion** records a human NO-GO for this candidate and gate.
+5. Inspect the human review and timestamp in Evidence explorer. After a decline, the original agent recommendation remains GO and the effective decision is NO-GO. Neither button starts another LLM investigation or directly mutates the rollout.
+6. After approval, watch the rollout advance; the next Production gate needs a fresh investigation and approval. After decline, Argo aborts when it reads the decision; request a new candidate release to try again.
 
-When the model recommends GO and all safety requirements pass, the effective result remains **HOLD**. The UI exposes **Approve promotion**. Approving the pending decision runs the policy checks again; it does not bypass them.
+When the model recommends GO and all safety requirements pass, the effective result remains **HOLD**. The UI exposes **Approve promotion** and **Decline promotion**, with the consequences beside the controls. Both actions require the current fresh pending review and matching live release, stable baseline, and rollout stage. Approving the pending decision runs the policy checks again; it does not bypass them.
 
 <figure markdown>
 

@@ -62,3 +62,23 @@ test('controlled trace gap explains the consequence, enterprise lesson and recov
  await setup(page,e);await page.goto('/');await page.getByRole('button',{name:'Evidence explorer'}).click();
  const insight=page.locator('.evidence-gap-insight');await expect(insight).toContainText('Healthy metrics are not enough to authorize promotion');await expect(insight).toContainText('mandatory request-level check for dependency and retry behavior is incomplete');await expect(insight).toContainText('Select Healthy release');await expect(insight).toContainText('Human approval cannot waive');await expect(page.locator('.evidence-decision')).toContainText('Required evidence is missing');
 });
+
+test('shared slowdown highlights both captured p95 values and the common limit',async({page})=>{
+ const e=evaluation();e.evidence.stable.p95Ms=652.52;e.evidence.canary.p95Ms=654.37;
+ await setup(page,e);await page.goto('/');await page.getByRole('button',{name:'Evidence explorer'}).click();
+ const row=page.locator('.latency-limit-row');await expect(row.locator('.latency-over-limit')).toHaveText(['652.52 ms','654.37 ms']);await expect(row.locator('.latency-limit-explanation')).toHaveText('Both exceed the 500 ms limit.');await expect(row).toContainText('consistent with shared degradation');await expect(row).toContainText('does not prove root cause');
+ await row.screenshot({path:test.info().outputPath('shared-slowdown-latency-row.png')});
+});
+for(const [stable,canary,highlighted]of [[3,650,['650.00 ms']],[650,3,['650.00 ms']],[500,500,[]],[650,900,['650.00 ms','900.00 ms']]])test(`latency highlighting respects cohort values ${stable}/${canary}`,async({page})=>{
+ const e=evaluation();e.evidence.stable.p95Ms=stable;e.evidence.canary.p95Ms=canary;
+ await setup(page,e);await page.goto('/');await page.getByRole('button',{name:'Evidence explorer'}).click();
+ await expect(page.locator('.latency-over-limit')).toHaveText(highlighted);
+ if(stable===500)await expect(page.locator('.latency-limit-row')).toHaveCount(0);
+ else await expect(page.locator('.latency-limit-row')).not.toContainText('consistent with shared degradation');
+});
+
+test('controlled trace outage is highlighted in findings, policy reason and limitations',async({page})=>{
+ const e=evaluation();const phrase='Presenter-injected trace evidence outage';e.evidence.missing=[phrase];e.evidence.traces=[];e.recommendation.summary='HOLD because of '+phrase;e.recommendation.limitations=[phrase];e.decision.reason='Required evidence missing: '+phrase;e.findings.release.summary='Required observations unavailable: '+phrase;e.findings.release.limitations=[phrase];
+ await setup(page,e);await page.goto('/');await page.getByRole('button',{name:'Evidence explorer'}).click();const view=page.locator('#evidence-content');
+ await expect(view.locator('.policy-reason mark')).toHaveText(phrase);await expect(view.locator('[data-agent="release"] mark')).toHaveText([phrase,phrase,phrase]);await expect(view.locator('.evidence-gap-insight')).toContainText('deliberately withheld trace-linked request observations');
+});
