@@ -26,7 +26,7 @@
           "app" : "checkout"
         },
         "annotations" : {
-          "demo.canary/released-at" : "2026-11-09T15:50:34.352913687Z"
+          "demo.canary/released-at" : "2026-11-09T15:53:44.611877391Z"
         }
       },
       "spec" : {
@@ -45,7 +45,7 @@
             "value" : "checkout"
           }, {
             "name" : "DEMO_RELEASE",
-            "value" : "v3"
+            "value" : "v2"
           }, {
             "name" : "QUARKUS_OTEL_RESOURCE_ATTRIBUTES",
             "value" : "service.name=checkout"
@@ -122,7 +122,7 @@
             } ],
             "args" : [ {
               "name" : "release",
-              "value" : "v3"
+              "value" : "v2"
             } ]
           }
         }, {
@@ -138,7 +138,7 @@
             } ],
             "args" : [ {
               "name" : "release",
-              "value" : "v3"
+              "value" : "v2"
             } ]
           }
         }, {
